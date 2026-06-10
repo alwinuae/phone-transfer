@@ -15,9 +15,11 @@ public partial class MediaPreviewWindow : Window
     private readonly RemoteClient _client;
     private readonly IReadOnlyList<RemoteItem> _items;
     private readonly DispatcherTimer _positionTimer;
+    private readonly bool _autoOpenDefaultApplication;
     private RemoteMediaServer? _server;
     private int _index;
     private int _rotation;
+    private double _zoom = 1;
     private bool _isPlaying;
     private bool _isSeeking;
     private bool _isFullScreen;
@@ -29,10 +31,12 @@ public partial class MediaPreviewWindow : Window
     public MediaPreviewWindow(
         RemoteClient client,
         RemoteItem item,
-        IReadOnlyList<RemoteItem>? folderMedia = null)
+        IReadOnlyList<RemoteItem>? folderMedia = null,
+        bool autoOpenDefaultApplication = false)
     {
         InitializeComponent();
         _client = client;
+        _autoOpenDefaultApplication = autoOpenDefaultApplication;
         _items = item.IsImage
             ? (folderMedia ?? [item]).Where(candidate => candidate.IsImage).ToArray()
             : [item];
@@ -63,12 +67,12 @@ public partial class MediaPreviewWindow : Window
             CenterPlayButton.Visibility = Visibility.Collapsed;
             PlaybackControls.Visibility = Visibility.Collapsed;
             SeekPanel.Visibility = Visibility.Collapsed;
-            PreviousButton.Visibility = item.IsImage ? Visibility.Visible : Visibility.Collapsed;
-            NextButton.Visibility = item.IsImage ? Visibility.Visible : Visibility.Collapsed;
+            ImageControls.Visibility = item.IsImage ? Visibility.Visible : Visibility.Collapsed;
             DefaultAppButton.Visibility = item.IsImage ? Visibility.Collapsed : Visibility.Visible;
             PreviousButton.IsEnabled = _index > 0;
             NextButton.IsEnabled = _index < _items.Count - 1;
             SetRotation(0);
+            SetZoom(1);
 
             if (item.IsImage)
             {
@@ -89,7 +93,9 @@ public partial class MediaPreviewWindow : Window
             }
 
             EnsureServer();
-            if (openDefaultForPlayback && OpenInDefaultApplication())
+            if (openDefaultForPlayback
+                && _autoOpenDefaultApplication
+                && OpenInDefaultApplication())
             {
                 StatusText.Text =
                     "Opened in the default Windows app. Keep this window open while it plays.";
@@ -173,6 +179,7 @@ public partial class MediaPreviewWindow : Window
         EnsureInternalSource();
         Player.Play();
         _isPlaying = true;
+        CenterPlayButton.Visibility = Visibility.Collapsed;
         StatusText.Text = "Playing in Phone Transfer";
     }
 
@@ -225,6 +232,7 @@ public partial class MediaPreviewWindow : Window
     {
         Player.Pause();
         _isPlaying = false;
+        CenterPlayButton.Visibility = Visibility.Collapsed;
         StatusText.Text = "Paused";
     }
 
@@ -232,6 +240,7 @@ public partial class MediaPreviewWindow : Window
     {
         Player.Stop();
         _isPlaying = false;
+        CenterPlayButton.Visibility = Visibility.Collapsed;
         SeekSlider.Value = 0;
         StatusText.Text = "Stopped";
     }
@@ -302,7 +311,37 @@ public partial class MediaPreviewWindow : Window
         RotatableSurface.LayoutTransform = new RotateTransform(_rotation);
     }
 
+    private void ZoomInButton_Click(object sender, RoutedEventArgs e) =>
+        SetZoom(_zoom + 0.25);
+
+    private void ZoomOutButton_Click(object sender, RoutedEventArgs e) =>
+        SetZoom(_zoom - 0.25);
+
+    private void ResetZoomButton_Click(object sender, RoutedEventArgs e) => SetZoom(1);
+
+    private void Photo_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        SetZoom(_zoom + (e.Delta > 0 ? 0.25 : -0.25));
+        e.Handled = true;
+    }
+
+    private void SetZoom(double value)
+    {
+        _zoom = Math.Clamp(value, 0.25, 4);
+        Photo.RenderTransform = new ScaleTransform(_zoom, _zoom);
+        ZoomText.Text = $"{_zoom * 100:0}%";
+    }
+
     private void FullScreenButton_Click(object sender, RoutedEventArgs e) => ToggleFullScreen();
+
+    private void MediaSurface_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            ToggleFullScreen();
+            e.Handled = true;
+        }
+    }
 
     private void ToggleFullScreen()
     {
@@ -348,6 +387,21 @@ public partial class MediaPreviewWindow : Window
         else if (e.Key == Key.R)
         {
             RotateButton_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (CurrentItem.IsImage && (e.Key == Key.Add || e.Key == Key.OemPlus))
+        {
+            SetZoom(_zoom + 0.25);
+            e.Handled = true;
+        }
+        else if (CurrentItem.IsImage && (e.Key == Key.Subtract || e.Key == Key.OemMinus))
+        {
+            SetZoom(_zoom - 0.25);
+            e.Handled = true;
+        }
+        else if (CurrentItem.IsImage && e.Key == Key.D0)
+        {
+            SetZoom(1);
             e.Handled = true;
         }
         else if (e.Key == Key.F)

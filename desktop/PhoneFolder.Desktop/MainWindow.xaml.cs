@@ -4,6 +4,8 @@ using PhoneFolder.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -109,11 +111,23 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var settings = new SettingsWindow { Owner = this };
+        if (settings.ShowDialog() == true)
+        {
+            OperationStatusText.Text = AppSettingsStore.Load().AlwaysOpenInDefaultApplication
+                ? "Default-application opening is enabled."
+                : "Phone Transfer viewers are enabled for photos, video, and audio.";
+        }
+    }
+
     private void RefreshTrustedDevices(RememberedConnection? selected)
     {
         var selectedFingerprint = NormalizeFingerprint(selected?.CertificateFingerprint);
         _trustedDevices.Clear();
         foreach (var profile in ConnectionProfileStore.LoadAll()
+                     .Where(profile => profile.IsEnabled)
                      .OrderByDescending(profile => profile.LastConnectedAt))
         {
             _trustedDevices.Add(profile);
@@ -609,7 +623,7 @@ public partial class MainWindow : Window
     {
         if (!selected.IsDirectory)
         {
-            OpenMedia(selected);
+            await OpenRemoteFileAsync(selected);
             return;
         }
         if (_current is null)
@@ -626,31 +640,81 @@ public partial class MainWindow : Window
     private void Items_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
         UpdateActionState();
 
-    private void OpenMediaButton_Click(object sender, RoutedEventArgs e)
+    private async void OpenMediaButton_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedItem() is not { } item)
         {
-            ShowError("Select a photo, video, or audio file first.");
+            ShowError("Select a file first.");
             return;
         }
-        OpenMedia(item);
+        await OpenRemoteFileAsync(item);
     }
 
-    private void OpenMedia(RemoteItem item)
+    private async Task OpenRemoteFileAsync(RemoteItem item)
     {
         if (_client is null)
         {
             ShowError("Connect to a phone first.");
             return;
         }
-        if (!item.IsMedia)
+        if (item.IsDirectory)
         {
-            ShowError("Direct viewing supports photos, videos, and audio files.");
             return;
         }
+
+        var alwaysUseDefault = AppSettingsStore.Load().AlwaysOpenInDefaultApplication;
         var mediaItems = _items.Where(candidate => candidate.IsMedia).ToArray();
-        var preview = new MediaPreviewWindow(_client, item, mediaItems) { Owner = this };
-        preview.Show();
+        if (item.IsMedia && (!alwaysUseDefault || item.IsVideo || item.IsAudio))
+        {
+            var preview = new MediaPreviewWindow(
+                _client,
+                item,
+                mediaItems,
+                autoOpenDefaultApplication: alwaysUseDefault)
+            {
+                Owner = this
+            };
+            preview.Show();
+            return;
+        }
+
+        await OpenDownloadedFileAsync(item);
+    }
+
+    private async Task OpenDownloadedFileAsync(RemoteItem item)
+    {
+        var cacheDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "Phone Transfer",
+            "Opened Files",
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+                $"{item.Id}\n{item.ModifiedAt}\n{item.Size}"))));
+        var destination = Path.Combine(
+            cacheDirectory,
+            FileNameSanitizer.Sanitize(item.Name));
+
+        await RunTransferAsync(async progress =>
+        {
+            if (!File.Exists(destination)
+                || new FileInfo(destination).Length != item.Size)
+            {
+                var watch = Stopwatch.StartNew();
+                await _client!.DownloadAsync(item, destination, value =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        OperationStatusText.Text = TransferStatus(
+                            $"Opening {item.Name}",
+                            item.Size,
+                            value,
+                            watch.Elapsed);
+                        progress.Report(value);
+                    });
+                });
+            }
+            Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
+            OperationStatusText.Text = $"Opened {item.Name} in the Windows default application.";
+        });
     }
 
     private async void UploadButton_Click(object sender, RoutedEventArgs e)
@@ -1326,7 +1390,7 @@ public partial class MainWindow : Window
         TokenTextBox.IsEnabled = !busy;
         DiscoveredDevicesCombo.IsEnabled = !busy;
         RememberDeviceCheckBox.IsEnabled = !busy;
-        ForgetDeviceButton.IsEnabled = !busy && _trustedDevices.Count > 0;
+        ForgetDeviceButton.IsEnabled = !busy && ConnectionProfileStore.LoadAll().Count > 0;
 
         DisconnectButton.IsEnabled = connected && !busy;
         RefreshButton.IsEnabled = browsing && !busy;
@@ -1340,7 +1404,8 @@ public partial class MainWindow : Window
         ViewModeButton.IsEnabled = browsing && !busy;
         OpenMediaButton.IsEnabled = browsing
             && !busy
-            && SelectedItem() is { IsMedia: true };
+            && SelectedItem() is { IsDirectory: false };
+        SettingsButton.IsEnabled = !busy;
         FilesHost.AllowDrop = browsing && !busy;
     }
 

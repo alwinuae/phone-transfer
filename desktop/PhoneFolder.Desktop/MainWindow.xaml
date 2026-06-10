@@ -171,6 +171,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Button x:Name="BackButton"
                                 IsEnabled="False"
@@ -199,6 +200,22 @@
                                 IsEnabled="False"
                                 Click="DisconnectButton_Click"
                                 Content="Disconnect"/>
+                        <Button x:Name="SettingsButton"
+                                Grid.Column="5"
+                                Margin="4,0,0,0"
+                                Padding="10,7"
+                                Click="SettingsButton_Click"
+                                ToolTip="Application setup">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Width="17"
+                                      Height="17"
+                                      Margin="0,0,7,0"
+                                      Fill="{StaticResource TextBrush}"
+                                      Stretch="Uniform"
+                                      Data="M12,8.5 A3.5,3.5 0 1 0 12,15.5 A3.5,3.5 0 1 0 12,8.5 M9.6,2 L14.4,2 L15,4.3 L17,5.1 L19.1,4 L22,6.9 L20.9,9 L21.7,11 L24,11.6 L24,16.4 L21.7,17 L20.9,19 L22,21.1 L19.1,24 L17,22.9 L15,23.7 L14.4,26 L9.6,26 L9,23.7 L7,22.9 L4.9,24 L2,21.1 L3.1,19 L2.3,17 L0,16.4 L0,11.6 L2.3,11 L3.1,9 L2,6.9 L4.9,4 L7,5.1 L9,4.3 Z"/>
+                                <TextBlock VerticalAlignment="Center" Text="Setup"/>
+                            </StackPanel>
+                        </Button>
                     </Grid>
                 </Border>
 
@@ -226,8 +243,8 @@
                         <WrapPanel x:Name="FileActionsPanel" IsEnabled="False">
                             <Button x:Name="OpenMediaButton"
                                     Click="OpenMediaButton_Click"
-                                    Content="Open / Play"
-                                    ToolTip="Open selected media (Enter)"/>
+                                    Content="Open"
+                                    ToolTip="Open the selected file (Enter)"/>
                             <Button Click="UploadButton_Click" Content="Upload files" ToolTip="Upload files from this PC"/>
                             <Button Click="UploadFolderButton_Click" Content="Upload folder" ToolTip="Upload a folder from this PC"/>
                             <Button Click="DownloadButton_Click" Content="Download" ToolTip="Download selected items"/>

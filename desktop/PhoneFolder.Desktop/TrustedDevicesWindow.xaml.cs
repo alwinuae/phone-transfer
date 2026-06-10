@@ -30,6 +30,21 @@ public partial class TrustedDevicesWindow : Window
         Refresh();
     }
 
+    private void EnabledCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.CheckBox
+            {
+                DataContext: TrustedPhoneRow selected
+            } checkBox)
+        {
+            return;
+        }
+        ConnectionProfileStore.SetEnabled(
+            selected.Profile.CertificateFingerprint,
+            checkBox.IsChecked == true);
+        Refresh();
+    }
+
     private void RemoveAllButton_Click(object sender, RoutedEventArgs e)
     {
         if (MessageBox.Show(
@@ -51,6 +66,7 @@ public partial class TrustedDevicesWindow : Window
     {
         public string DeviceName => Profile.DeviceName;
         public string Host => Profile.Host;
+        public bool IsEnabled => Profile.IsEnabled;
         public string LastConnectedLabel => Profile.LastConnectedAt == default
             ? "Previously"
             : Profile.LastConnectedAt.LocalDateTime.ToString("g");

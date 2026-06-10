@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Trusted phones"
         Icon="Assets/PhoneTransfer.ico"
-        Width="720"
-        Height="440"
-        MinWidth="580"
+        Width="590"
+        Height="410"
+        MinWidth="520"
         MinHeight="340"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="18">
@@ -24,13 +24,22 @@
                   Grid.Row="1"
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
-                  IsReadOnly="True"
                   SelectionMode="Single"
                   SelectionUnit="FullRow">
             <DataGrid.Columns>
-                <DataGridTextColumn Width="*" Binding="{Binding DeviceName}" Header="Phone"/>
-                <DataGridTextColumn Width="150" Binding="{Binding Host}" Header="Last address"/>
-                <DataGridTextColumn Width="180" Binding="{Binding LastConnectedLabel}" Header="Last connected"/>
+                <DataGridTemplateColumn Width="70" Header="Enabled">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Click="EnabledCheckBox_Click"
+                                      IsChecked="{Binding IsEnabled, Mode=OneWay}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Width="*" Binding="{Binding DeviceName}" Header="Phone" IsReadOnly="True"/>
+                <DataGridTextColumn Width="120" Binding="{Binding Host}" Header="Address" IsReadOnly="True"/>
+                <DataGridTextColumn Width="135" Binding="{Binding LastConnectedLabel}" Header="Last used" IsReadOnly="True"/>
             </DataGrid.Columns>
         </DataGrid>
         <DockPanel Grid.Row="2" Margin="0,14,0,0">

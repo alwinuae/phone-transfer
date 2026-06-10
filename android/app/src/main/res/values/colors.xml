@@ -1,4 +1,5 @@
 <resources>
     <color name="phonefolder_blue">#276EF1</color>
     <color name="phonefolder_background">#F4F7FB</color>
+    <color name="phonefolder_icon_background">#CDE5FC</color>
 </resources>

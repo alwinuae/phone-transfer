@@ -64,6 +64,19 @@ try
     ConnectionProfileStore.Save(secondProfile);
     var profiles = ConnectionProfileStore.LoadAll();
     Require(profiles.Count == 2, "Multiple trusted phone profiles were not retained.");
+    ConnectionProfileStore.SetEnabled(secondProfile.CertificateFingerprint, false);
+    profiles = ConnectionProfileStore.LoadAll();
+    Require(
+        profiles.Single(profile =>
+            profile.CertificateFingerprint == secondProfile.CertificateFingerprint).IsEnabled == false,
+        "The trusted phone could not be disabled.");
+    Require(
+        ConnectionProfileStore.Load()?.CertificateFingerprint == expectedProfile.CertificateFingerprint,
+        "Disabled trusted phone was selected for automatic reconnect.");
+    ConnectionProfileStore.SetEnabled(secondProfile.CertificateFingerprint, true);
+    Require(
+        ConnectionProfileStore.Load()?.CertificateFingerprint == secondProfile.CertificateFingerprint,
+        "Re-enabled trusted phone was not selected for automatic reconnect.");
     ConnectionProfileStore.Delete(expectedProfile.CertificateFingerprint);
     profiles = ConnectionProfileStore.LoadAll();
     Require(
@@ -71,7 +84,7 @@ try
         "Deleting one trusted phone removed the wrong profile.");
     ConnectionProfileStore.Delete();
     Require(ConnectionProfileStore.Load() is null, "The remembered profile was not deleted.");
-    Console.WriteLine("PASS: Multiple trusted phone profiles were securely saved, switched, and deleted.");
+    Console.WriteLine("PASS: Multiple trusted phone profiles were saved, enabled/disabled, switched, and deleted.");
 }
 finally
 {
@@ -83,6 +96,28 @@ finally
     {
     }
     Environment.SetEnvironmentVariable("PHONEFOLDER_CREDENTIAL_TARGET", null);
+}
+
+var settingsPath = Path.Combine(
+    Path.GetTempPath(),
+    $"PhoneTransfer-NetworkTest-{Guid.NewGuid():N}.json");
+Environment.SetEnvironmentVariable("PHONEFOLDER_SETTINGS_PATH", settingsPath);
+try
+{
+    AppSettingsStore.Save(new AppSettings(AlwaysOpenInDefaultApplication: true));
+    Require(
+        AppSettingsStore.Load().AlwaysOpenInDefaultApplication,
+        "The default-application preference was not persisted.");
+    AppSettingsStore.Save(new AppSettings(AlwaysOpenInDefaultApplication: false));
+    Require(
+        !AppSettingsStore.Load().AlwaysOpenInDefaultApplication,
+        "The default-application preference could not be disabled.");
+    Console.WriteLine("PASS: Default-application setup preference was saved and disabled.");
+}
+finally
+{
+    File.Delete(settingsPath);
+    Environment.SetEnvironmentVariable("PHONEFOLDER_SETTINGS_PATH", null);
 }
 
 if (args.Length >= 2 && int.TryParse(args[1], out var diagnosticPort))

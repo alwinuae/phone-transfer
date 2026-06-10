@@ -1,5 +1,13 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.6.0
+
+- Setup gear and persistent Windows default-application preference.
+- Image zoom controls, mouse-wheel zoom, and zoom keyboard shortcuts.
+- Cleaner video playback overlay behavior and fullscreen toggling.
+- Compact trusted-phone table with per-device enable/disable.
+- Optimized Windows icon and Android adaptive/round launcher branding.
+
 ## Shipped In 0.5.0
 
 - Default Windows media-app streaming handoff and improved in-app controls.

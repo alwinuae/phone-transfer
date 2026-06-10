@@ -336,7 +336,10 @@ function Complete-Prompt {
         [string]$Value
     )
 
-    $prompt = Get-ModalWindow -ProcessId $ProcessId -Name $Title
+    $prompt = Find-ProcessElement `
+        -ProcessId $ProcessId `
+        -Name $Title `
+        -ControlType ([System.Windows.Automation.ControlType]::Window)
     try {
         $input = Find-Element `
             -Root $prompt `
@@ -367,7 +370,10 @@ function Complete-Prompt {
 function Confirm-Delete {
     param([int]$ProcessId)
 
-    $dialog = Get-ModalWindow -ProcessId $ProcessId -Name "Confirm delete"
+    $dialog = Find-ProcessElement `
+        -ProcessId $ProcessId `
+        -Name "Confirm delete" `
+        -ControlType ([System.Windows.Automation.ControlType]::Window)
     $yes = Find-Element `
         -Root $dialog `
         -Name "Yes" `
@@ -434,8 +440,10 @@ function Complete-FolderDialog {
 function Start-TestApplication {
     $previousDisabledSetting = $env:PHONEFOLDER_DISABLE_REMEMBERED_DEVICE
     $previousCredentialTarget = $env:PHONEFOLDER_CREDENTIAL_TARGET
+    $previousSettingsPath = $env:PHONEFOLDER_SETTINGS_PATH
     Remove-Item Env:PHONEFOLDER_DISABLE_REMEMBERED_DEVICE -ErrorAction SilentlyContinue
     $env:PHONEFOLDER_CREDENTIAL_TARGET = $credentialTarget
+    $env:PHONEFOLDER_SETTINGS_PATH = $settingsPath
     try {
         return Start-Process -FilePath $exe -PassThru
     } finally {
@@ -449,9 +457,16 @@ function Start-TestApplication {
         } else {
             $env:PHONEFOLDER_CREDENTIAL_TARGET = $previousCredentialTarget
         }
+        if ($null -eq $previousSettingsPath) {
+            Remove-Item Env:PHONEFOLDER_SETTINGS_PATH -ErrorAction SilentlyContinue
+        } else {
+            $env:PHONEFOLDER_SETTINGS_PATH = $previousSettingsPath
+        }
     }
 }
 $credentialTarget = "PhoneFolder/UI-Test-$([Guid]::NewGuid().ToString('N'))"
+$settingsPath = Join-Path $artifactRoot "settings.json"
+Remove-Item -LiteralPath $settingsPath -Force -ErrorAction SilentlyContinue
 $process = Start-TestApplication
 $createdFolder = "UI-QA-$([DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss"))"
 $renamedFolder = "$createdFolder-renamed"
@@ -508,6 +523,27 @@ try {
         throw "File actions were enabled before connecting."
     }
     $results.Add("PC Hotspot mode was available and file actions remained disabled before connecting.")
+
+    Set-TestStage "checking setup options"
+    Invoke-Element -Element (Find-Element `
+        -Root $window `
+        -AutomationId "SettingsButton" `
+        -ControlType ([System.Windows.Automation.ControlType]::Button))
+    $settingsWindow = Get-ModalWindow `
+        -ProcessId $process.Id `
+        -Name "Phone Transfer setup"
+    $defaultApplicationToggle = Find-Element `
+        -Root $settingsWindow `
+        -AutomationId "DefaultApplicationCheckBox" `
+        -ControlType ([System.Windows.Automation.ControlType]::CheckBox)
+    if ($defaultApplicationToggle.Current.IsOffscreen) {
+        throw "The default-application setup toggle was not visible."
+    }
+    Invoke-Element -Element (Find-Element `
+        -Root $settingsWindow `
+        -Name "Cancel" `
+        -ControlType ([System.Windows.Automation.ControlType]::Button))
+    $results.Add("Setup gear opened the Windows default-application option.")
 
     Set-TestStage "connecting"
     Set-ElementValue `
@@ -568,7 +604,8 @@ try {
         @{ Label = "Details"; Visible = "FilesGrid" }
     )
     foreach ($check in $viewChecks) {
-        Invoke-Element -Element $viewMode
+        Set-TestStage "checking $($check.Label.ToLowerInvariant()) view"
+        Click-Element -Window $window -Element $viewMode
         $menuItem = Find-ProcessElement `
             -ProcessId $process.Id `
             -Name $check.Label `
@@ -659,15 +696,24 @@ try {
         -Root $window `
         -AutomationId "ForgetDeviceButton" `
         -ControlType ([System.Windows.Automation.ControlType]::Button))
-    $trustedWindow = Get-ModalWindow `
+    $trustedWindow = Find-ProcessElement `
         -ProcessId $process.Id `
-        -Name "Trusted phones"
+        -Name "Trusted phones" `
+        -ControlType ([System.Windows.Automation.ControlType]::Window)
     $trustedList = Find-Element `
         -Root $trustedWindow `
         -AutomationId "ProfilesGrid" `
         -ControlType ([System.Windows.Automation.ControlType]::DataGrid)
     if (-not $trustedList.Current.IsEnabled) {
         throw "The trusted-phone manager list was unavailable."
+    }
+    $trustedCheckBoxes = $trustedList.FindAll(
+        [System.Windows.Automation.TreeScope]::Descendants,
+        [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+            [System.Windows.Automation.ControlType]::CheckBox))
+    if ($trustedCheckBoxes.Count -lt 1) {
+        throw "The trusted-phone enable/disable checkbox was unavailable."
     }
     $closeButtons = $trustedWindow.FindAll(
         [System.Windows.Automation.TreeScope]::Descendants,
@@ -693,9 +739,10 @@ try {
     do {
         Start-Sleep -Milliseconds 150
         try {
-            $remainingTrustedWindow = Get-ModalWindow `
+            $remainingTrustedWindow = Find-ProcessElement `
                 -ProcessId $process.Id `
                 -Name "Trusted phones" `
+                -ControlType ([System.Windows.Automation.ControlType]::Window) `
                 -TimeoutSeconds 1
         } catch {
             $remainingTrustedWindow = $null
@@ -706,7 +753,7 @@ try {
         throw "The trusted-phone manager did not close."
     }
     $results.Add("Trusted reconnect worked after changing the access-code field: $trustedConnection")
-    $results.Add("The full trusted-phone manager opened from the Setup section.")
+    $results.Add("The compact trusted-phone manager opened with an enable/disable checkbox.")
 
     Set-TestStage "creating folder"
     if (-not $newFolderButton.Current.IsEnabled -or $newFolderButton.Current.IsOffscreen) {
@@ -800,7 +847,14 @@ try {
     if ($previewStatus.Current.IsOffscreen) {
         throw "The direct image preview status was not visible."
     }
-    foreach ($controlName in @("Previous", "Next", "Rotate", "Full screen")) {
+    foreach ($controlName in @(
+        "Previous",
+        "Next",
+        "Zoom out",
+        "Zoom in",
+        "Reset",
+        "Rotate",
+        "Full screen")) {
         Find-Element `
             -Root $previewWindow `
             -Name $controlName `
@@ -809,7 +863,7 @@ try {
     $previewWindowPattern = $previewWindow.GetCurrentPattern(
         [System.Windows.Automation.WindowPattern]::Pattern)
     $previewWindowPattern.Close()
-    $results.Add("Opened an image with previous, next, rotate, and fullscreen controls without a PC copy.")
+    $results.Add("Opened an image with previous, next, zoom, rotate, and fullscreen controls without a PC copy.")
 
     if (-not $process.HasExited) {
         $process.Kill()
@@ -921,4 +975,5 @@ try {
         $process.WaitForExit()
     }
     & cmdkey.exe "/delete:$credentialTarget" 2>$null | Out-Null
+    Remove-Item -LiteralPath $settingsPath -Force -ErrorAction SilentlyContinue
 }

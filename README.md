@@ -4,19 +4,38 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.5.0
+## Version 0.6.0
 
 - Explorer-style browsing with folder tree, Details, List, and Thumbnail views.
 - Drag-and-drop upload, recursive transfer, resume, copy, move, rename, and delete.
-- Default-app media streaming plus in-app image/video/audio controls.
+- Optional Windows default-app opening for documents, images, audio, and video.
+- In-app image zoom, previous/next, rotation, and fullscreen controls.
+- In-app video/audio streaming with seek, rotate, and fullscreen controls.
 - Orientation-correct image and video thumbnails.
 - Resizable/collapsible folder navigation and Explorer keyboard shortcuts.
 - Optional Android full shared-storage access or one approved-folder mode.
 - Android Quick Settings start/stop tile.
 - Secure one-time pairing and trusted-device reconnect after code changes.
-- Multiple-phone switching and full trusted-device management on both apps.
+- Multiple-phone switching with per-phone trust enable/disable and removal.
 - Live speed, progress, and ETA for upload and download.
 - Router and Windows 5 GHz Mobile Hotspot modes.
+- Installable Windows setup, portable Windows executable, and signed Android APK.
+- Rounded Windows branding and Android adaptive launcher icon.
+
+## Quick Start
+
+1. Install the Android APK and Windows Setup EXE from the latest GitHub release.
+2. Put both devices on the same router, or connect the phone to the PC's
+   Windows Mobile Hotspot.
+3. On Android, choose a folder or enable full shared-storage access, then tap
+   **Start sharing**. The Quick Settings tile can start or stop sharing later.
+4. On Windows, select a discovered phone or enter its address, port, and access
+   code, then choose **Connect**.
+5. Drag files into Phone Transfer to upload them. Use the toolbar or keyboard
+   shortcuts to download, copy, move, rename, delete, preview, or open files.
+6. After the first trusted connection, reconnect without the changing access
+   code. Use **Setup and connection > Trusted phones** to enable, disable, or
+   remove saved phones.
 
 ## Android Storage Boundary
 
@@ -40,9 +59,9 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-v0.5.0.exe
-artifacts/release/Phone-Transfer-Windows-Setup-v0.5.0.exe
-artifacts/release/Phone-Transfer-Android-v0.5.0.apk
+artifacts/release/Phone-Transfer-Windows-v0.6.0.exe
+artifacts/release/Phone-Transfer-Windows-Setup-v0.6.0.exe
+artifacts/release/Phone-Transfer-Android-v0.6.0.apk
 artifacts/release/SHA256SUMS.txt
 ```
 
@@ -56,7 +75,7 @@ dotnet run --project .\tests\PhoneFolder.PerformanceTests `
   -c Release -- <host> 8765 <access-code> .\artifacts\performance <source-file>
 
 .\scripts\test-windows-ui.ps1 `
-  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.5.0.exe `
+  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.6.0.exe `
   -AccessCode <access-code>
 ```
 

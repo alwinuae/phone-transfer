@@ -1,32 +1,38 @@
-# Phone Transfer 0.5.0
+# Phone Transfer 0.6.0
 
-Phone Transfer 0.5.0 improves media viewing, Explorer-style file management,
-Android Quick Settings access, orientation handling, and Windows installation.
+Phone Transfer 0.6.0 adds flexible Windows file opening, better media controls,
+safer trusted-phone management, and refreshed Windows and Android branding.
 
-## New
+## New And Improved
 
-- Videos and audio open in the Windows default application first for smoother,
-  hardware-decoded playback while streaming directly from the phone.
-- In-app playback fallback with a centered play control, seek bar, rotate,
-  fullscreen, and keyboard controls.
-- Image viewer with previous/next, fullscreen, rotate, arrow-key navigation,
-  and EXIF orientation correction.
-- Orientation-correct image and video thumbnails generated on Android.
-- Mouse-resizable and collapsible folder navigation pane.
-- Distinct folder icons and consistent connection/setup fields.
-- Escape, Alt+Left, Alt+Up, F5, Delete, Enter, and Ctrl+A shortcuts.
-- Multi-item phone-side copy, move, and delete actions.
-- Android Quick Settings tile now displays Start sharing or Stop sharing.
-- New supplied Phone Transfer logo across the Windows and Android apps.
-- Installable Windows Setup EXE with Start Menu shortcut, optional desktop
-  shortcut, and uninstall support. The portable EXE remains available.
+- New Setup gear with an **Always open files in the Windows default
+  application** option for Word, Excel, PDF, images, audio, video, and other
+  registered file types.
+- Image viewer zoom from 25% to 400% using buttons, the mouse wheel, or
+  `+`, `-`, and `0`, alongside previous/next, rotate, and fullscreen controls.
+- Video player keeps the seek bar and playback controls but removes the large
+  center play/pause overlay after playback begins.
+- Fullscreen can be entered or exited with its button, a double-click, `F`, or
+  `Esc`.
+- Trusted phones are shown in a more compact table and can be individually
+  enabled or disabled without deleting their saved pairing.
+- Optimized rounded Windows logo, multi-resolution taskbar icon, and Android
+  adaptive/round launcher icon based on the supplied laptop-to-phone artwork.
+- Existing Explorer-style navigation, drag-and-drop transfer, multi-file
+  operations, orientation correction, hotspot mode, and transfer speed/ETA
+  reporting remain available.
 
-## Installation
+## Installation And Use
 
-1. Install `Phone-Transfer-Android-v0.5.0.apk`.
-2. Install `Phone-Transfer-Windows-Setup-v0.5.0.exe`, or run the portable
-   `Phone-Transfer-Windows-v0.5.0.exe`.
-3. Start sharing from Android, or add the Start sharing Quick Settings tile.
+1. Install `Phone-Transfer-Android-v0.6.0.apk`.
+2. Install `Phone-Transfer-Windows-Setup-v0.6.0.exe`, or run the portable
+   `Phone-Transfer-Windows-v0.6.0.exe`.
+3. Connect both devices to the same Wi-Fi network, or connect the Android phone
+   to the PC's Windows Mobile Hotspot.
+4. Start sharing on Android, choose the desired storage access, and connect
+   from Windows using discovery or the displayed address, port, and code.
+5. After the first trusted connection, the saved cryptographic device identity
+   allows direct reconnect even when the Android access code changes.
 
 The Android package ID and signing key remain compatible with prior releases.
 The Windows files are not Authenticode-signed and may trigger SmartScreen.

@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "0.5.0"
+  #define MyAppVersion "0.6.0"
 #endif
 #ifndef SourceExe
   #define SourceExe "..\artifacts\publish\windows\PhoneTransfer.exe"
@@ -13,8 +13,8 @@ AppId={{7A72FCF2-27D1-47DA-8EB7-E804F9A5DFA9}
 AppName=Phone Transfer
 AppVersion={#MyAppVersion}
 AppPublisher=Phone Transfer
-AppPublisherURL=https://github.com/
-AppSupportURL=https://github.com/
+AppPublisherURL=https://github.com/alwinuae/phone-transfer
+AppSupportURL=https://github.com/alwinuae/phone-transfer/issues
 DefaultDirName={localappdata}\Programs\Phone Transfer
 DefaultGroupName=Phone Transfer
 DisableProgramGroupPage=yes

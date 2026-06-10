@@ -15,7 +15,10 @@ public static class ConnectionProfileStore
     private const int MaximumProfiles = 8;
 
     public static RememberedConnection? Load() =>
-        LoadAll().OrderByDescending(profile => profile.LastConnectedAt).FirstOrDefault();
+        LoadAll()
+            .Where(profile => profile.IsEnabled)
+            .OrderByDescending(profile => profile.LastConnectedAt)
+            .FirstOrDefault();
 
     public static IReadOnlyList<RememberedConnection> LoadAll()
     {
@@ -73,6 +76,25 @@ public static class ConnectionProfileStore
             Delete();
         }
         else
+        {
+            WriteCredential(JsonSerializer.Serialize(profiles));
+        }
+    }
+
+    public static void SetEnabled(string certificateFingerprint, bool enabled)
+    {
+        if (IsDisabled)
+        {
+            return;
+        }
+
+        var normalized = NormalizeFingerprint(certificateFingerprint);
+        var profiles = LoadAll()
+            .Select(profile => NormalizeFingerprint(profile.CertificateFingerprint) == normalized
+                ? profile with { IsEnabled = enabled }
+                : profile)
+            .ToList();
+        if (profiles.Count > 0)
         {
             WriteCredential(JsonSerializer.Serialize(profiles));
         }
@@ -210,7 +232,10 @@ public sealed record RememberedConnection(
     string DeviceName,
     string TrustedToken = "",
     string ClientId = "",
-    DateTimeOffset LastConnectedAt = default)
+    DateTimeOffset LastConnectedAt = default,
+    bool IsEnabled = true)
 {
-    public string DisplayName => $"{DeviceName} ({Host})";
+    public string DisplayName => IsEnabled
+        ? $"{DeviceName} ({Host})"
+        : $"{DeviceName} ({Host}) - disabled";
 }

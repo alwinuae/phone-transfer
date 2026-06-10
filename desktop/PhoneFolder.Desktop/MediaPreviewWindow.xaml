@@ -16,11 +16,15 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid x:Name="MediaSurface" Background="#101827">
+        <Grid x:Name="MediaSurface"
+              Background="#101827"
+              MouseLeftButtonDown="MediaSurface_MouseLeftButtonDown">
             <Grid x:Name="RotatableSurface"
                   Margin="18"
                   RenderTransformOrigin="0.5,0.5">
                 <Image x:Name="Photo"
+                       MouseWheel="Photo_MouseWheel"
+                       RenderTransformOrigin="0.5,0.5"
                        Stretch="Uniform"
                        Visibility="Collapsed"/>
                 <MediaElement x:Name="Player"
@@ -83,14 +87,25 @@
                 </Grid>
 
                 <WrapPanel HorizontalAlignment="Center">
-                    <Button x:Name="PreviousButton"
-                            Click="PreviousButton_Click"
-                            Content="Previous"
-                            Visibility="Collapsed"/>
-                    <Button x:Name="NextButton"
-                            Click="NextButton_Click"
-                            Content="Next"
-                            Visibility="Collapsed"/>
+                    <StackPanel x:Name="ImageControls"
+                                Orientation="Horizontal"
+                                Visibility="Collapsed">
+                        <Button x:Name="PreviousButton"
+                                Click="PreviousButton_Click"
+                                Content="Previous"/>
+                        <Button x:Name="NextButton"
+                                Click="NextButton_Click"
+                                Content="Next"/>
+                        <Button Click="ZoomOutButton_Click" Content="Zoom out"/>
+                        <TextBlock x:Name="ZoomText"
+                                   Width="58"
+                                   VerticalAlignment="Center"
+                                   Foreground="White"
+                                   Text="100%"
+                                   TextAlignment="Center"/>
+                        <Button Click="ZoomInButton_Click" Content="Zoom in"/>
+                        <Button Click="ResetZoomButton_Click" Content="Reset"/>
+                    </StackPanel>
                     <StackPanel x:Name="PlaybackControls"
                                 Orientation="Horizontal"
                                 Visibility="Collapsed">

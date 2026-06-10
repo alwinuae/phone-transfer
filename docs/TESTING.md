@@ -15,7 +15,7 @@ dotnet run --project tests\PhoneFolder.PerformanceTests -c Release -- `
   127.0.0.1 8765 <access-code> artifacts\performance <source-file>
 
 .\scripts\test-windows-ui.ps1 `
-  -ExePath artifacts\release\Phone-Transfer-Windows-v0.5.0.exe `
+  -ExePath artifacts\release\Phone-Transfer-Windows-v0.6.0.exe `
   -HostAddress 127.0.0.1 `
   -AccessCode <access-code>
 ```
@@ -26,6 +26,24 @@ Android release validation:
 cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
+
+## 0.6.0 Verification Summary
+
+- Windows solution build completed with zero warnings and zero errors.
+- Trusted-phone tests verified save, enable, disable, automatic selection,
+  switching, and deletion.
+- Android release lint and compilation completed successfully with the adaptive
+  launcher icon resources.
+- Packaged Windows UI verification passed the Setup gear, default-app option,
+  compact trusted-phone manager, image zoom controls, taskbar icon, connection,
+  Explorer views, transfer integrity, and trusted reconnect.
+- Full Android/Windows integration passed TLS identity, trust, recursive
+  transfer, resume, byte-range streaming, thumbnails, copy, move, rename, and
+  cleanup tests.
+- The 5,534,041-byte MP4 sample averaged 11.01 MiB/s upload and 13.82 MiB/s
+  download in the emulator/ADB forwarding environment.
+- The Windows Setup EXE installed, launched version `0.6.0`, and uninstalled
+  cleanly from an isolated per-user directory.
 
 ## 0.5.0 Verification Summary
 
