@@ -1,0 +1,264 @@
+openapi: 3.1.0
+info:
+  title: Phone Transfer Local API
+  version: 0.5.0
+  description: >
+    HTTPS API exposed by the Android companion while sharing is active.
+    Except for /info, file requests require either the current access code or
+    a trusted-device token issued during an access-code-authenticated pairing.
+servers:
+  - url: https://phone-address:8765/api/v1
+components:
+  securitySchemes:
+    accessCode:
+      type: apiKey
+      in: header
+      name: X-PhoneFolder-Token
+    trustedDevice:
+      type: apiKey
+      in: header
+      name: X-Phone-Transfer-Trusted-Token
+  schemas:
+    DeviceInfo:
+      type: object
+      required: [name, version, protocolVersion, port, transport, certificateFingerprint, sharing]
+      properties:
+        name: { type: string }
+        version: { type: string }
+        protocolVersion: { type: integer }
+        port: { type: integer }
+        transport: { type: string, const: https }
+        certificateFingerprint: { type: string }
+        sharing: { type: boolean }
+    RemoteItem:
+      type: object
+      required: [id, name, isDirectory, size, modifiedAt, mimeType, canWrite]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        isDirectory: { type: boolean }
+        size: { type: integer, format: int64 }
+        modifiedAt: { type: integer, format: int64 }
+        mimeType: { type: string }
+        canWrite: { type: boolean }
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    TrustGrant:
+      type: object
+      required: [trustedToken]
+      properties:
+        trustedToken: { type: string }
+paths:
+  /info:
+    get:
+      summary: Get device and TLS identity information
+      responses:
+        "200":
+          description: Device information
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceInfo" }
+  /trust:
+    post:
+      security: [{ accessCode: [] }]
+      summary: Trust a Windows PC after validating the current access code
+      parameters:
+        - in: header
+          name: X-Phone-Transfer-Client-Id
+          required: true
+          schema: { type: string, maxLength: 128 }
+        - in: header
+          name: X-Phone-Transfer-Client-Name
+          required: false
+          schema: { type: string, maxLength: 80 }
+      responses:
+        "201":
+          description: Long-lived trusted-device token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrustGrant" }
+        "401":
+          description: Current access code required
+  /roots:
+    get:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: List approved storage roots
+      responses:
+        "200":
+          description: Approved roots
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RemoteItem" }
+        "401":
+          description: Invalid access code and trusted-device token
+  /items/{itemId}/children:
+    get:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: List directory children
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Directory children
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RemoteItem" }
+  /items/{itemId}/content:
+    get:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Stream file content for download or direct media playback
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: header
+          name: Range
+          required: false
+          schema:
+            type: string
+            examples: [bytes=1048576-]
+      responses:
+        "200": { description: Complete file body }
+        "206": { description: Resumed file body }
+  /items/{itemId}/thumbnail:
+    get:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Get an image or video thumbnail
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: size
+          required: false
+          schema: { type: integer, minimum: 64, maximum: 512, default: 256 }
+      responses:
+        "200":
+          description: JPEG thumbnail
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "404": { description: Thumbnail unavailable }
+  /items/{itemId}/upload:
+    post:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Upload a file into a directory
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: name
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "201":
+          description: Created file
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemoteItem" }
+  /items/{itemId}/folder:
+    post:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Create a child folder
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: name
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created folder
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemoteItem" }
+  /items/{itemId}/move:
+    post:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Move an item to another directory
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: parentId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Moved item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemoteItem" }
+  /items/{itemId}/copy:
+    post:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Copy a file or folder to another directory
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: parentId
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Copied item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemoteItem" }
+  /items/{itemId}:
+    patch:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Rename an item
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: name
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Renamed item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemoteItem" }
+    delete:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Permanently delete an item
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Item deleted }

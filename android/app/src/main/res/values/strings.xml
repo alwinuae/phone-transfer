@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Phone Transfer</string>
+    <string name="start_sharing">Start sharing</string>
+    <string name="sharing_service_description">Shares an approved folder with paired computers on the local network.</string>
+    <string name="same_network_hint">Connect both devices to the same Wi-Fi network.</string>
+    <string name="no_folder_selected">No folder selected</string>
+    <string name="certificate_fingerprint">Certificate SHA-256: %1$s</string>
+</resources>

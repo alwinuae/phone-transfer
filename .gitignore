@@ -1,0 +1,18 @@
+# Build outputs
+**/bin/
+**/obj/
+**/build/
+**/.gradle/
+artifacts/
+.tools/
+
+# Machine-specific Android configuration
+android/local.properties
+
+# Private release signing material
+.local-signing/
+
+# IDE files
+.idea/
+.vs/
+*.user
