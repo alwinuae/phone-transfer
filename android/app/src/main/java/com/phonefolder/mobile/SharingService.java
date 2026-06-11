@@ -254,7 +254,7 @@ public final class SharingService extends Service {
         return new Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("Phone Transfer is sharing")
                 .setContentText(text)
-                .setSmallIcon(android.R.drawable.stat_sys_upload)
+                .setSmallIcon(R.drawable.ic_phone_transfer_tile)
                 .setContentIntent(openPendingIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

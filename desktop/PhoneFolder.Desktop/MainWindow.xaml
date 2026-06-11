@@ -59,63 +59,93 @@
                     <Button x:Name="SwitchDeviceButton"
                             Margin="0,8,0,12"
                             Click="SwitchDeviceButton_Click"
-                            Content="Connect selected phone"
+                            Content="Connect trusted phone"
                             Style="{StaticResource PrimaryButton}"/>
 
                     <Expander x:Name="SetupExpander"
                               Margin="0,4,0,0"
                               Header="Setup and connection">
                         <StackPanel Margin="0,12,0,0">
-                            <TextBlock Margin="0,0,0,6"
-                                       FontWeight="SemiBold"
-                                       Text="Discovered phones"/>
-                            <ComboBox x:Name="DiscoveredDevicesCombo"
-                                      Margin="0,0,0,10"
-                                      DisplayMemberPath="DisplayName"
-                                      SelectionChanged="DiscoveredDevicesCombo_SelectionChanged"/>
-                            <Button x:Name="DiscoverButton"
-                                    Margin="0,0,0,8"
-                                    Click="DiscoverButton_Click"
-                                    Content="Discover on Wi-Fi"/>
+                            <Border Margin="0,0,0,12"
+                                    Padding="12"
+                                    Background="#F7FAFE"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="9">
+                                <StackPanel>
+                                    <TextBlock FontWeight="Bold" Text="Router Wi-Fi"/>
+                                    <TextBlock Margin="0,3,0,9"
+                                               Foreground="{StaticResource MutedBrush}"
+                                               Text="Use when the PC and phone share the same Wi-Fi router."
+                                               TextWrapping="Wrap"/>
+                                    <Button x:Name="DiscoverButton"
+                                            Margin="0,0,0,8"
+                                            Click="DiscoverButton_Click"
+                                            Content="Find phones on router Wi-Fi"/>
+                                    <ComboBox x:Name="DiscoveredDevicesCombo"
+                                              Margin="0,0,0,8"
+                                              DisplayMemberPath="DisplayName"
+                                              SelectionChanged="DiscoveredDevicesCombo_SelectionChanged"/>
+                                    <Button x:Name="ConnectDiscoveredButton"
+                                            Click="ConnectDiscoveredButton_Click"
+                                            Content="Connect selected Wi-Fi phone"
+                                            Style="{StaticResource PrimaryButton}"/>
+                                </StackPanel>
+                            </Border>
 
-                            <Button x:Name="HotspotButton"
-                                    Margin="0,0,0,18"
-                                    Click="HotspotButton_Click"
-                                    Content="PC Hotspot (Direct Wi-Fi)"
-                                    ToolTip="Connect through Windows Mobile Hotspot without using the router"/>
+                            <Border Margin="0,0,0,12"
+                                    Padding="12"
+                                    Background="#F7FAFE"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="9">
+                                <StackPanel>
+                                    <TextBlock FontWeight="Bold" Text="PC hotspot (direct Wi-Fi)"/>
+                                    <TextBlock Margin="0,3,0,9"
+                                               Foreground="{StaticResource MutedBrush}"
+                                               Text="Connect the phone to Windows Mobile Hotspot for a direct local link."
+                                               TextWrapping="Wrap"/>
+                                    <Button x:Name="OpenHotspotSettingsButton"
+                                            Margin="0,0,0,8"
+                                            Click="OpenHotspotSettingsButton_Click"
+                                            Content="Open hotspot settings"/>
+                                    <Button x:Name="HotspotButton"
+                                            Click="HotspotButton_Click"
+                                            Content="Find phone on PC hotspot"/>
+                                </StackPanel>
+                            </Border>
 
-                            <TextBlock Margin="0,0,0,6"
-                                       FontWeight="SemiBold"
-                                       Text="Phone address"/>
-                            <TextBox x:Name="HostTextBox"
-                                     Margin="0,0,0,12"
-                                     Text="192.168.1.2"/>
-
-                            <TextBlock Margin="0,0,0,6"
-                                       FontWeight="SemiBold"
-                                       Text="Port"/>
-                            <TextBox x:Name="PortTextBox"
-                                     Margin="0,0,0,12"
-                                     Text="8765"/>
-
-                            <TextBlock Margin="0,0,0,6"
-                                       FontWeight="SemiBold"
-                                       Text="Access code"/>
-                            <TextBox x:Name="TokenTextBox"
-                                     Margin="0,0,0,12"
-                                     MaxLength="12"/>
-
-                            <CheckBox x:Name="RememberDeviceCheckBox"
-                                      Margin="0,0,0,0"
-                                      IsChecked="True"
-                                      Content="Trust this PC for future connections"
-                                      ToolTip="A cryptographic trusted-device token is stored securely in Windows Credential Manager"/>
-
-                            <Button x:Name="ConnectButton"
-                                    Margin="0,14,0,0"
-                                    Click="ConnectButton_Click"
-                                    Content="Connect manually"
-                                    Style="{StaticResource PrimaryButton}"/>
+                            <Expander Header="Manual address">
+                                <StackPanel Margin="0,10,0,0">
+                                    <TextBlock Margin="0,0,0,6"
+                                               FontWeight="SemiBold"
+                                               Text="Phone address"/>
+                                    <TextBox x:Name="HostTextBox"
+                                             Margin="0,0,0,12"
+                                             Text="192.168.1.2"/>
+                                    <TextBlock Margin="0,0,0,6"
+                                               FontWeight="SemiBold"
+                                               Text="Port"/>
+                                    <TextBox x:Name="PortTextBox"
+                                             Margin="0,0,0,12"
+                                             Text="8765"/>
+                                    <TextBlock Margin="0,0,0,6"
+                                               FontWeight="SemiBold"
+                                               Text="Access code"/>
+                                    <TextBox x:Name="TokenTextBox"
+                                             Margin="0,0,0,12"
+                                             MaxLength="12"/>
+                                    <CheckBox x:Name="RememberDeviceCheckBox"
+                                              IsChecked="True"
+                                              Content="Trust this PC for future connections"
+                                              ToolTip="A cryptographic trusted-device token is stored securely in Windows Credential Manager"/>
+                                    <Button x:Name="ConnectButton"
+                                            Margin="0,14,0,0"
+                                            Click="ConnectButton_Click"
+                                            Content="Connect using address"
+                                            Style="{StaticResource PrimaryButton}"/>
+                                </StackPanel>
+                            </Expander>
 
                             <Button x:Name="ForgetDeviceButton"
                                     Margin="0,8,0,0"
@@ -172,21 +202,25 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Button x:Name="BackButton"
                                 IsEnabled="False"
                                 Click="BackButton_Click"
-                                Content="Back"/>
+                                Content="&lt; Back"
+                                Style="{StaticResource NavigationButton}"/>
                         <Button x:Name="UpButton"
                                 Grid.Column="1"
                                 IsEnabled="False"
                                 Click="UpButton_Click"
-                                Content="Up"/>
+                                Content="^ Up"
+                                Style="{StaticResource NavigationButton}"/>
                         <Button x:Name="RefreshButton"
                                 Grid.Column="2"
                                 IsEnabled="False"
                                 Click="RefreshButton_Click"
-                                Content="Refresh"/>
+                                Content="Refresh"
+                                Style="{StaticResource NavigationButton}"/>
                         <TextBlock x:Name="PathText"
                                    Grid.Column="3"
                                    Margin="10,0"
@@ -199,7 +233,8 @@
                                 Grid.Column="4"
                                 IsEnabled="False"
                                 Click="DisconnectButton_Click"
-                                Content="Disconnect"/>
+                                Content="Not connected"
+                                Style="{StaticResource DisconnectedButton}"/>
                         <Button x:Name="SettingsButton"
                                 Grid.Column="5"
                                 Margin="4,0,0,0"
@@ -216,6 +251,11 @@
                                 <TextBlock VerticalAlignment="Center" Text="Setup"/>
                             </StackPanel>
                         </Button>
+                        <Button x:Name="TransfersButton"
+                                Grid.Column="6"
+                                Margin="4,0,0,0"
+                                Click="TransfersButton_Click"
+                                Content="Transfers"/>
                     </Grid>
                 </Border>
 
@@ -249,9 +289,25 @@
                             <Button Click="UploadFolderButton_Click" Content="Upload folder" ToolTip="Upload a folder from this PC"/>
                             <Button Click="DownloadButton_Click" Content="Download" ToolTip="Download selected items"/>
                             <Button Click="NewFolderButton_Click" Content="New folder" ToolTip="Create a folder"/>
+                            <Button x:Name="OpenFolderWindowButton"
+                                    Click="OpenFolderWindowButton_Click"
+                                    Content="Open folder window"
+                                    ToolTip="Open the current or selected folder in another window"/>
+                            <Button x:Name="CopySelectionButton"
+                                    Click="CopySelectionButton_Click"
+                                    Content="Copy"
+                                    ToolTip="Copy checked items (Ctrl+C)"/>
+                            <Button x:Name="CutSelectionButton"
+                                    Click="CutSelectionButton_Click"
+                                    Content="Cut"
+                                    ToolTip="Cut checked items (Ctrl+X)"/>
+                            <Button x:Name="PasteButton"
+                                    Click="PasteButton_Click"
+                                    Content="Paste"
+                                    ToolTip="Paste into this folder (Ctrl+V)"/>
                             <Button x:Name="CopyButton"
                                     Click="CopyButton_Click"
-                                    Content="Copy to"
+                                    Content="Copy to..."
                                     ToolTip="Copy all selected items to another phone folder"/>
                             <Button Click="MoveButton_Click" Content="Move to" ToolTip="Move all selected items"/>
                             <Button Click="RenameButton_Click" Content="Rename" ToolTip="Rename the selected item"/>
@@ -322,10 +378,20 @@
                                   HeadersVisibility="Column"
                                   IsReadOnly="True"
                                   MouseDoubleClick="Items_MouseDoubleClick"
+                                  PreviewMouseMove="Items_PreviewMouseMove"
                                   SelectionChanged="Items_SelectionChanged"
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow">
                             <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="42" Header="">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Name"/>
                                 <DataGridTextColumn Width="150" Binding="{Binding TypeLabel}" Header="Type"/>
                                 <DataGridTextColumn Width="110" Binding="{Binding SizeLabel}" Header="Size"/>
@@ -336,19 +402,24 @@
                         <ListBox x:Name="FilesList"
                                  Visibility="Collapsed"
                                  MouseDoubleClick="Items_MouseDoubleClick"
+                                 PreviewMouseMove="Items_PreviewMouseMove"
                                  SelectionChanged="Items_SelectionChanged"
                                  SelectionMode="Extended">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid MinHeight="34" Margin="4,2">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="34"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="150"/>
                                             <ColumnDefinition Width="110"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Name}"/>
-                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding TypeLabel}"/>
-                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding SizeLabel}"/>
+                                        <CheckBox HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Name}"/>
+                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding TypeLabel}"/>
+                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding SizeLabel}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -357,6 +428,7 @@
                         <ListBox x:Name="ThumbnailList"
                                  Visibility="Collapsed"
                                  MouseDoubleClick="Items_MouseDoubleClick"
+                                 PreviewMouseMove="Items_PreviewMouseMove"
                                  SelectionChanged="Items_SelectionChanged"
                                  SelectionMode="Extended"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -374,6 +446,10 @@
                                                 <RowDefinition Height="112"/>
                                                 <RowDefinition Height="*"/>
                                             </Grid.RowDefinitions>
+                                            <CheckBox HorizontalAlignment="Left"
+                                                      VerticalAlignment="Top"
+                                                      Panel.ZIndex="2"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <Border Background="#F4F7FB" CornerRadius="5">
                                                 <Grid>
                                                     <Path Width="52"
@@ -476,22 +552,10 @@
                         Padding="18,12"
                         BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="0,1,0,0">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="260"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="OperationStatusText"
-                                   VerticalAlignment="Center"
-                                   Foreground="{StaticResource MutedBrush}"
-                                   Text="Ready"/>
-                        <ProgressBar x:Name="TransferProgressBar"
-                                     Grid.Column="1"
-                                     Height="8"
-                                     VerticalAlignment="Center"
-                                     Maximum="100"
-                                     Visibility="Collapsed"/>
-                    </Grid>
+                    <TextBlock x:Name="OperationStatusText"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource MutedBrush}"
+                               Text="Ready"/>
                 </Border>
             </Grid>
         </Border>

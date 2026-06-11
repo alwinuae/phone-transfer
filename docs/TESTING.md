@@ -15,7 +15,7 @@ dotnet run --project tests\PhoneFolder.PerformanceTests -c Release -- `
   127.0.0.1 8765 <access-code> artifacts\performance <source-file>
 
 .\scripts\test-windows-ui.ps1 `
-  -ExePath artifacts\release\Phone-Transfer-Windows-v0.6.0.exe `
+  -ExePath artifacts\release\Phone-Transfer-Windows-v0.7.0.exe `
   -HostAddress 127.0.0.1 `
   -AccessCode <access-code>
 ```
@@ -26,6 +26,23 @@ Android release validation:
 cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
+
+## 0.7.0 Verification Summary
+
+- Windows and Android release builds completed successfully.
+- Router discovery now combines active probes with passive Android
+  announcements; hotspot-only discovery remains adapter-scoped.
+- Concurrent transfer jobs use independent authenticated HTTP clients and do
+  not disable browsing or connection controls.
+- Silent installer and Installed Apps metadata are validated against the
+  per-user uninstall registry entry.
+- The signed APK upgraded in place to version code `10` / version `0.7.0`.
+- Full integration passed TLS pinning, trust, concurrent requests, recursive
+  transfers, resume, streaming ranges, thumbnails, copy, move, and cleanup.
+- A random 5 MiB sample averaged 26.94 MiB/s upload and 28.90 MiB/s download
+  through the emulator/ADB forwarding test path.
+- Silent setup exited with code `0` and registered `Phone Transfer` version
+  `0.7.0`, publisher `Alwin Thomas`, normal uninstall, and quiet uninstall.
 
 ## 0.6.0 Verification Summary
 

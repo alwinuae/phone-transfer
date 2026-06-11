@@ -1,0 +1,109 @@
+<Window x:Class="PhoneFolder.Desktop.FolderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Phone Transfer - Folder"
+        Icon="Assets/PhoneTransfer.ico"
+        Width="920"
+        Height="600"
+        MinWidth="720"
+        MinHeight="440"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DockPanel>
+            <Button x:Name="BackButton"
+                    Click="BackButton_Click"
+                    Content="&lt; Back"
+                    Style="{StaticResource NavigationButton}"/>
+            <Button x:Name="UpButton"
+                    Click="UpButton_Click"
+                    Content="^ Up"
+                    Style="{StaticResource NavigationButton}"/>
+            <Button Click="RefreshButton_Click"
+                    Content="Refresh"
+                    Style="{StaticResource NavigationButton}"/>
+            <TextBlock x:Name="PathText"
+                       Margin="10,0"
+                       VerticalAlignment="Center"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"/>
+        </DockPanel>
+        <WrapPanel Grid.Row="1" Margin="0,10,0,10">
+            <Button Click="UploadButton_Click" Content="Upload files"/>
+            <Button Click="DownloadButton_Click" Content="Download"/>
+            <Button Click="CopyButton_Click" Content="Copy"/>
+            <Button Click="CutButton_Click" Content="Cut"/>
+            <Button Click="PasteButton_Click" Content="Paste"/>
+            <Button Click="DeleteButton_Click" Content="Delete"/>
+            <Button Click="OpenFolderWindowButton_Click" Content="Open another window"/>
+            <Button Click="TransfersButton_Click" Content="Transfers"/>
+        </WrapPanel>
+        <Grid Grid.Row="2"
+              AllowDrop="True"
+              DragOver="Files_DragOver"
+              Drop="Files_Drop">
+            <DataGrid x:Name="FilesGrid"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      MouseDoubleClick="Files_MouseDoubleClick"
+                      PreviewMouseMove="Files_PreviewMouseMove"
+                      SelectionMode="Extended"
+                      SelectionUnit="FullRow">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Click="OpenMenuItem_Click" Header="Open"/>
+                        <Separator/>
+                        <MenuItem Click="CopyButton_Click" Header="Copy"/>
+                        <MenuItem Click="CutButton_Click" Header="Cut"/>
+                        <MenuItem Click="PasteButton_Click" Header="Paste"/>
+                        <Separator/>
+                        <MenuItem Click="DeleteButton_Click" Header="Delete"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Width="42">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Name"/>
+                    <DataGridTextColumn Width="150" Binding="{Binding TypeLabel}" Header="Type"/>
+                    <DataGridTextColumn Width="110" Binding="{Binding SizeLabel}" Header="Size"/>
+                    <DataGridTextColumn Width="170" Binding="{Binding ModifiedLabel}" Header="Modified"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border x:Name="DropHint"
+                    Padding="20"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#F2F7FF"
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="2"
+                    CornerRadius="10"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed">
+                <TextBlock FontSize="17"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}"
+                           Text="Drop PC files or copied phone items here"/>
+            </Border>
+        </Grid>
+        <TextBlock x:Name="StatusText"
+                   Grid.Row="3"
+                   Margin="4,10,4,0"
+                   Foreground="{StaticResource MutedBrush}"
+                   Text="Ready"/>
+    </Grid>
+</Window>

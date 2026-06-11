@@ -10,6 +10,7 @@ namespace PhoneFolder.Desktop.Services;
 public sealed class DiscoveryService
 {
     private const int DiscoveryPort = 8766;
+    private const int AnnouncementPort = 8767;
     private static readonly byte[] Request = Encoding.UTF8.GetBytes("PHONEFOLDER_DISCOVER_V1");
 
     public async Task<IReadOnlyList<DiscoveredDevice>> DiscoverAsync(
@@ -17,6 +18,14 @@ public sealed class DiscoveryService
         bool hotspotOnly = false)
     {
         var clients = CreateClients(hotspotOnly);
+        if (!hotspotOnly)
+        {
+            var listener = CreateAnnouncementListener();
+            if (listener is not null)
+            {
+                clients.Add(listener);
+            }
+        }
         if (clients.Count == 0)
         {
             return [];
@@ -30,22 +39,7 @@ public sealed class DiscoveryService
                 .Select(client => ReceiveLoopAsync(client, devices, cancellation.Token))
                 .ToArray();
 
-            foreach (var client in clients)
-            {
-                foreach (var target in DiscoveryTargets(client))
-                {
-                    try
-                    {
-                        await client.Client.SendAsync(
-                            Request,
-                            new IPEndPoint(target, DiscoveryPort));
-                    }
-                    catch (SocketException)
-                    {
-                        // Another active adapter or target can still discover the phone.
-                    }
-                }
-            }
+            var sender = SendRequestsAsync(clients, cancellation.Token);
 
             try
             {
@@ -55,7 +49,7 @@ public sealed class DiscoveryService
             {
             }
             cancellation.Cancel();
-            await Task.WhenAll(receivers);
+            await Task.WhenAll(receivers.Append(sender));
         }
         finally
         {
@@ -66,6 +60,50 @@ public sealed class DiscoveryService
         }
 
         return devices.Values.OrderBy(device => device.Name).ToList();
+    }
+
+    private static async Task SendRequestsAsync(
+        IReadOnlyList<DiscoveryClient> clients,
+        CancellationToken cancellationToken)
+    {
+        var firstPass = true;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            foreach (var client in clients.Where(item => item.CanSend))
+            {
+                var targets = firstPass
+                    ? DiscoveryTargets(client)
+                    : [client.BroadcastAddress];
+                foreach (var target in targets)
+                {
+                    try
+                    {
+                        await client.Client.SendAsync(
+                            Request,
+                            new IPEndPoint(target, DiscoveryPort),
+                            cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                    catch (SocketException)
+                    {
+                        // Another active adapter or the passive listener can still find the phone.
+                    }
+                }
+            }
+
+            firstPass = false;
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(750), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
     }
 
     private static async Task ReceiveLoopAsync(
@@ -155,7 +193,8 @@ public sealed class DiscoveryService
                         unicast.Address,
                         unicast.PrefixLength,
                         BroadcastAddress(unicast.Address, unicast.PrefixLength),
-                        HotspotService.IsHotspotInterface(network, unicast.Address)));
+                        HotspotService.IsHotspotInterface(network, unicast.Address),
+                        true));
                 }
                 catch (SocketException)
                 {
@@ -170,9 +209,39 @@ public sealed class DiscoveryService
                 EnableBroadcast = true
             };
             fallback.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
-            clients.Add(new DiscoveryClient(fallback, IPAddress.Any, 0, IPAddress.Broadcast, false));
+            clients.Add(new DiscoveryClient(
+                fallback,
+                IPAddress.Any,
+                0,
+                IPAddress.Broadcast,
+                false,
+                true));
         }
         return clients;
+    }
+
+    private static DiscoveryClient? CreateAnnouncementListener()
+    {
+        try
+        {
+            var listener = new UdpClient(AddressFamily.InterNetwork);
+            listener.Client.SetSocketOption(
+                SocketOptionLevel.Socket,
+                SocketOptionName.ReuseAddress,
+                true);
+            listener.Client.Bind(new IPEndPoint(IPAddress.Any, AnnouncementPort));
+            return new DiscoveryClient(
+                listener,
+                IPAddress.Any,
+                0,
+                IPAddress.Broadcast,
+                false,
+                false);
+        }
+        catch (SocketException)
+        {
+            return null;
+        }
     }
 
     private static IEnumerable<IPAddress> DiscoveryTargets(DiscoveryClient client)
@@ -235,5 +304,6 @@ public sealed class DiscoveryService
         IPAddress LocalAddress,
         int PrefixLength,
         IPAddress BroadcastAddress,
-        bool IsHotspot);
+        bool IsHotspot,
+        bool CanSend);
 }

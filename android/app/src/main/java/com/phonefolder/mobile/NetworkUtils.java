@@ -34,6 +34,20 @@ final class NetworkUtils {
         return addresses.isEmpty() ? "" : addresses.iterator().next();
     }
 
+    static Set<InetAddress> discoveryBroadcastAddresses(Context context) {
+        Set<InetAddress> broadcasts = new LinkedHashSet<>();
+        try {
+            broadcasts.add(InetAddress.getByName("255.255.255.255"));
+            for (String address : localIpv4Addresses(context)) {
+                byte[] bytes = InetAddress.getByName(address).getAddress();
+                bytes[3] = (byte) 255;
+                broadcasts.add(InetAddress.getByAddress(bytes));
+            }
+        } catch (Exception ignored) {
+        }
+        return broadcasts;
+    }
+
     private static Set<String> localIpv4Addresses(Context context) {
         Set<String> addresses = new LinkedHashSet<>();
         ConnectivityManager connectivity =

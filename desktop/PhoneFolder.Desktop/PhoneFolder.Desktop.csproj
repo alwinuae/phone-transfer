@@ -10,11 +10,12 @@
     <RootNamespace>PhoneFolder.Desktop</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\PhoneTransfer.ico</ApplicationIcon>
-    <Version>0.6.0</Version>
+    <Version>0.7.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <AssemblyTitle>Phone Transfer</AssemblyTitle>
     <Product>Phone Transfer</Product>
-    <Authors>Phone Transfer</Authors>
+    <Authors>Alwin Thomas</Authors>
+    <Company>Alwin Thomas</Company>
     <Description>Wireless Android file browser and transfer client.</Description>
   </PropertyGroup>
 

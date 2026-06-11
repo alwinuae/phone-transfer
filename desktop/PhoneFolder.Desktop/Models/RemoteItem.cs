@@ -7,6 +7,7 @@ namespace PhoneFolder.Desktop.Models;
 public sealed class RemoteItem : INotifyPropertyChanged
 {
     private ImageSource? _thumbnail;
+    private bool _isChecked;
 
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
@@ -15,6 +16,19 @@ public sealed class RemoteItem : INotifyPropertyChanged
     public long ModifiedAt { get; set; }
     public string MimeType { get; set; } = string.Empty;
     public bool CanWrite { get; set; }
+    public bool IsChecked
+    {
+        get => _isChecked;
+        set
+        {
+            if (_isChecked == value)
+            {
+                return;
+            }
+            _isChecked = value;
+            OnPropertyChanged();
+        }
+    }
     public ImageSource? Thumbnail
     {
         get => _thumbnail;

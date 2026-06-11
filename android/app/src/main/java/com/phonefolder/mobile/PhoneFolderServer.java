@@ -35,6 +35,7 @@ import javax.net.ssl.SSLServerSocket;
 final class PhoneFolderServer implements Closeable {
     static final int HTTP_PORT = 8765;
     static final int DISCOVERY_PORT = 8766;
+    static final int ANNOUNCEMENT_PORT = 8767;
 
     private static final String TAG = "PhoneFolderServer";
     private static final int TRANSFER_BUFFER_SIZE = 2 * 1024 * 1024;
@@ -54,6 +55,7 @@ final class PhoneFolderServer implements Closeable {
     private DatagramSocket discoverySocket;
     private Thread acceptThread;
     private Thread discoveryThread;
+    private Thread announcementThread;
 
     PhoneFolderServer(
             StorageBackend storage,
@@ -90,6 +92,8 @@ final class PhoneFolderServer implements Closeable {
         acceptThread.start();
         discoveryThread = new Thread(this::discoveryLoop, "PhoneFolder-Discovery");
         discoveryThread.start();
+        announcementThread = new Thread(this::announcementLoop, "PhoneFolder-Announcement");
+        announcementThread.start();
     }
 
     private void acceptLoop() {
@@ -119,10 +123,7 @@ final class PhoneFolderServer implements Closeable {
                     continue;
                 }
 
-                String responseText = "PHONEFOLDER_V1|" + deviceName + "|"
-                        + NetworkUtils.localIpv4Address(appContext) + "|" + HTTP_PORT + "|"
-                        + certificateFingerprint.replace(":", "");
-                byte[] response = responseText.getBytes(StandardCharsets.UTF_8);
+                byte[] response = discoveryResponse();
                 discoverySocket.send(new DatagramPacket(
                         response,
                         response.length,
@@ -134,6 +135,36 @@ final class PhoneFolderServer implements Closeable {
                 }
             }
         }
+    }
+
+    private void announcementLoop() {
+        while (running.get()) {
+            try {
+                byte[] response = discoveryResponse();
+                for (InetAddress address : NetworkUtils.discoveryBroadcastAddresses(appContext)) {
+                    discoverySocket.send(new DatagramPacket(
+                            response,
+                            response.length,
+                            address,
+                            ANNOUNCEMENT_PORT));
+                }
+                Thread.sleep(2_000);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                return;
+            } catch (Exception exception) {
+                if (running.get()) {
+                    Log.w(TAG, "Announcement failed", exception);
+                }
+            }
+        }
+    }
+
+    private byte[] discoveryResponse() {
+        String responseText = "PHONEFOLDER_V1|" + deviceName + "|"
+                + NetworkUtils.localIpv4Address(appContext) + "|" + HTTP_PORT + "|"
+                + certificateFingerprint.replace(":", "");
+        return responseText.getBytes(StandardCharsets.UTF_8);
     }
 
     private void handle(Socket socket) {
@@ -166,7 +197,7 @@ final class PhoneFolderServer implements Closeable {
         if ("/api/v1/info".equals(path) && "GET".equals(request.method)) {
             String json = "{"
                     + "\"name\":\"" + JsonUtil.escape(deviceName) + "\","
-                    + "\"version\":\"0.6.0\","
+                    + "\"version\":\"0.7.0\","
                     + "\"protocolVersion\":1,"
                     + "\"port\":" + HTTP_PORT + ","
                     + "\"transport\":\"https\","
@@ -611,6 +642,9 @@ final class PhoneFolderServer implements Closeable {
         }
         if (discoveryThread != null) {
             discoveryThread.interrupt();
+        }
+        if (announcementThread != null) {
+            announcementThread.interrupt();
         }
     }
 

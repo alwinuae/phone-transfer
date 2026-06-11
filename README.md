@@ -4,8 +4,16 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.6.0
+## Version 0.7.0
 
+- Background transfer queue with up to three concurrent uploads/downloads.
+- Transfer window with per-job progress, speed, ETA, cancellation, and history.
+- Separate router Wi-Fi and PC hotspot discovery workflows.
+- Passive Android announcements improve discovery on restrictive Wi-Fi routers.
+- Multiple independent folder windows with drag/drop and copy/cut/paste.
+- Checkbox selection works across Details, List, and Thumbnail views.
+- Windows default-app mode bypasses the Phone Transfer player completely.
+- Explicit Windows Installed Apps publisher and uninstall registration.
 - Explorer-style browsing with folder tree, Details, List, and Thumbnail views.
 - Drag-and-drop upload, recursive transfer, resume, copy, move, rename, and delete.
 - Optional Windows default-app opening for documents, images, audio, and video.
@@ -59,9 +67,9 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-v0.6.0.exe
-artifacts/release/Phone-Transfer-Windows-Setup-v0.6.0.exe
-artifacts/release/Phone-Transfer-Android-v0.6.0.apk
+artifacts/release/Phone-Transfer-Windows-v0.7.0.exe
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.0.exe
+artifacts/release/Phone-Transfer-Android-v0.7.0.apk
 artifacts/release/SHA256SUMS.txt
 ```
 
@@ -75,7 +83,7 @@ dotnet run --project .\tests\PhoneFolder.PerformanceTests `
   -c Release -- <host> 8765 <access-code> .\artifacts\performance <source-file>
 
 .\scripts\test-windows-ui.ps1 `
-  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.6.0.exe `
+  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.7.0.exe `
   -AccessCode <access-code>
 ```
 

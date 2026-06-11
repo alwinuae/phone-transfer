@@ -15,6 +15,7 @@ namespace PhoneFolder.Desktop;
 
 public partial class MainWindow : Window
 {
+    private const string RemoteItemsFormat = "PhoneTransfer.RemoteItems";
     private readonly ObservableCollection<RemoteItem> _items = [];
     private readonly ObservableCollection<DiscoveredDevice> _discoveredDevices = [];
     private readonly ObservableCollection<RememberedConnection> _trustedDevices = [];
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _thumbnailCancellation;
     private GridLength _folderPaneWidth = new(220);
     private int _busyDepth;
+    private TransferWindow? _transferWindow;
 
     public MainWindow()
     {
@@ -46,6 +48,7 @@ public partial class MainWindow : Window
             ConnectionStatusText.Text = $"Saved phone: {_rememberedConnection.DeviceName}";
         }
         SetupExpander.IsExpanded = _rememberedConnection is null;
+        TransferManager.Instance.Changed += TransferManager_Changed;
         UpdateActionState();
     }
 
@@ -104,6 +107,21 @@ public partial class MainWindow : Window
             SelectAllVisibleItems();
             e.Handled = true;
         }
+        else if (control && key == Key.C)
+        {
+            CopySelectionButton_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (control && key == Key.X)
+        {
+            CutSelectionButton_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (control && key == Key.V)
+        {
+            PasteButton_Click(sender, e);
+            e.Handled = true;
+        }
         else if (key == Key.Enter && SelectedItem() is { } selected)
         {
             await OpenItemAsync(selected);
@@ -120,6 +138,31 @@ public partial class MainWindow : Window
                 ? "Default-application opening is enabled."
                 : "Phone Transfer viewers are enabled for photos, video, and audio.";
         }
+    }
+
+    private void TransfersButton_Click(object sender, RoutedEventArgs e) => ShowTransfersWindow();
+
+    private void ShowTransfersWindow()
+    {
+        if (_transferWindow is null)
+        {
+            _transferWindow = new TransferWindow { Owner = this };
+            _transferWindow.Closed += (_, _) => _transferWindow = null;
+            _transferWindow.Show();
+        }
+        else
+        {
+            _transferWindow.Activate();
+        }
+    }
+
+    private void TransferManager_Changed(object? sender, EventArgs e)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var active = TransferManager.Instance.ActiveCount;
+            TransfersButton.Content = active > 0 ? $"Transfers ({active})" : "Transfers";
+        });
     }
 
     private void RefreshTrustedDevices(RememberedConnection? selected)
@@ -193,21 +236,37 @@ public partial class MainWindow : Window
         });
     }
 
+    private async void ConnectDiscoveredButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DiscoveredDevicesCombo.SelectedItem is not DiscoveredDevice)
+        {
+            ShowError("Find and select a phone on router Wi-Fi first.");
+            return;
+        }
+        await ConnectFromFieldsAsync(automatic: false);
+    }
+
+    private void OpenHotspotSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        HotspotService.OpenWindowsSettings();
+        OperationStatusText.Text =
+            "Turn on Mobile Hotspot, connect the phone to it, then click Find phone on PC hotspot.";
+    }
+
     private async void HotspotButton_Click(object sender, RoutedEventArgs e)
     {
         var hotspot = HotspotService.GetStatus();
         if (!hotspot.Active)
         {
-            HotspotService.OpenWindowsSettings();
             OperationStatusText.Text =
-                "Turn on Mobile Hotspot, connect the phone to it, then click PC Hotspot again.";
+                "PC hotspot is off. Use Open hotspot settings, then retry.";
             MessageBox.Show(
                 this,
-                "Windows Mobile Hotspot settings are open.\n\n"
+                "Windows Mobile Hotspot is not active.\n\n"
                 + "1. Turn on Mobile Hotspot.\n"
                 + "2. Connect the Android phone to that hotspot.\n"
                 + "3. Start sharing in Phone Transfer on Android.\n"
-                + "4. Click PC Hotspot (Direct Wi-Fi) again.",
+                + "4. Click Find phone on PC hotspot.",
                 "PC Hotspot",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -285,6 +344,7 @@ public partial class MainWindow : Window
             TrustedDevicesCombo.SelectedItem = trusted;
             ApplyRememberedConnection(trusted with { Host = device.Address, Port = device.Port });
         }
+        UpdateActionState();
     }
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
@@ -368,7 +428,6 @@ public partial class MainWindow : Window
             DeviceDetailsText.Text = $"{HotspotService.ConnectionDescription(endpoint.Host)}"
                 + $" | HTTPS | Protocol {info.ProtocolVersion}\n"
                 + $"Certificate SHA-256:\n{info.CertificateFingerprint}";
-            ConnectButton.Content = "Reconnect";
             _history.Clear();
             _folderRoots.Clear();
 
@@ -425,7 +484,8 @@ public partial class MainWindow : Window
             if (automatic)
             {
                 ConnectionStatusText.Text = "Saved phone is not currently available";
-                OperationStatusText.Text = "Start sharing on Android, then click Reconnect.";
+                OperationStatusText.Text =
+                    "Start sharing on Android, then use the matching trusted, Wi-Fi, or hotspot connection button.";
             }
             else
             {
@@ -532,7 +592,6 @@ public partial class MainWindow : Window
         DeviceDetailsText.Text = string.Empty;
         PathText.Text = "Connect to a phone to browse files";
         OperationStatusText.Text = "Ready";
-        ConnectButton.Content = "Connect";
         UpdateActionState();
     }
 
@@ -640,6 +699,75 @@ public partial class MainWindow : Window
     private void Items_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
         UpdateActionState();
 
+    private void Items_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+        var selected = SelectedItems();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+        var data = new DataObject();
+        data.SetData(RemoteItemsFormat, selected.ToArray());
+        DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Copy | DragDropEffects.Move);
+    }
+
+    private void OpenFolderWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_client is null || _current is null)
+        {
+            return;
+        }
+
+        var selectedFolder = SelectedItems().FirstOrDefault(item => item.IsDirectory);
+        var path = _current.Path.Select(item => (item.Id, item.Name));
+        if (selectedFolder is not null)
+        {
+            path = path.Append((selectedFolder.Id, selectedFolder.Name));
+        }
+        new FolderWindow(_client, path.ToArray()) { Owner = this }.Show();
+    }
+
+    private void CopySelectionButton_Click(object sender, RoutedEventArgs e) =>
+        SetRemoteClipboard(cut: false);
+
+    private void CutSelectionButton_Click(object sender, RoutedEventArgs e) =>
+        SetRemoteClipboard(cut: true);
+
+    private void SetRemoteClipboard(bool cut)
+    {
+        var selected = SelectedItems();
+        if (selected.Count == 0)
+        {
+            ShowError("Check or select one or more files or folders first.");
+            return;
+        }
+        RemoteClipboard.Set(selected, cut);
+        OperationStatusText.Text = $"{(cut ? "Cut" : "Copied")} {selected.Count} item(s).";
+        UpdateActionState();
+    }
+
+    private async void PasteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!EnsureConnected() || _current is null)
+        {
+            return;
+        }
+        if (!RemoteClipboard.HasItems)
+        {
+            ShowError("The Phone Transfer clipboard is empty.");
+            return;
+        }
+        await RunOperationAsync("Pasting items...", async () =>
+        {
+            await RemoteClipboard.PasteAsync(_client!, _current.Id);
+            await NavigateAsync(_current, addToHistory: false);
+        });
+    }
+
     private async void OpenMediaButton_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedItem() is not { } item)
@@ -664,13 +792,33 @@ public partial class MainWindow : Window
 
         var alwaysUseDefault = AppSettingsStore.Load().AlwaysOpenInDefaultApplication;
         var mediaItems = _items.Where(candidate => candidate.IsMedia).ToArray();
-        if (item.IsMedia && (!alwaysUseDefault || item.IsVideo || item.IsAudio))
+        if (alwaysUseDefault)
+        {
+            if (item.IsVideo || item.IsAudio)
+            {
+                try
+                {
+                    DefaultMediaSessionManager.Open(_client, item);
+                    OperationStatusText.Text =
+                        $"Streaming {item.Name} in the Windows default application.";
+                }
+                catch (Exception exception)
+                {
+                    ShowError(exception.Message);
+                }
+                return;
+            }
+
+            await OpenDownloadedFileAsync(item);
+            return;
+        }
+
+        if (item.IsMedia)
         {
             var preview = new MediaPreviewWindow(
                 _client,
                 item,
-                mediaItems,
-                autoOpenDefaultApplication: alwaysUseDefault)
+                mediaItems)
             {
                 Owner = this
             };
@@ -693,28 +841,32 @@ public partial class MainWindow : Window
             cacheDirectory,
             FileNameSanitizer.Sanitize(item.Name));
 
-        await RunTransferAsync(async progress =>
+        if (File.Exists(destination)
+            && new FileInfo(destination).Length == item.Size)
         {
-            if (!File.Exists(destination)
-                || new FileInfo(destination).Length != item.Size)
-            {
-                var watch = Stopwatch.StartNew();
-                await _client!.DownloadAsync(item, destination, value =>
-                {
-                    Dispatcher.Invoke(() =>
-                    {
-                        OperationStatusText.Text = TransferStatus(
-                            $"Opening {item.Name}",
-                            item.Size,
-                            value,
-                            watch.Elapsed);
-                        progress.Report(value);
-                    });
-                });
-            }
             Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
             OperationStatusText.Text = $"Opened {item.Name} in the Windows default application.";
-        });
+            return;
+        }
+
+        TransferManager.Instance.Enqueue(
+            _client!,
+            item.Name,
+            "Download",
+            item.Size,
+            async (client, progress, cancellationToken) =>
+            {
+                await client.DownloadAsync(item, destination, progress, cancellationToken);
+            },
+            completed: () =>
+            {
+                Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
+                OperationStatusText.Text =
+                    $"Opened {item.Name} in the Windows default application.";
+            });
+        ShowTransfersWindow();
+        OperationStatusText.Text = $"Queued {item.Name} for opening.";
+        await Task.CompletedTask;
     }
 
     private async void UploadButton_Click(object sender, RoutedEventArgs e)
@@ -769,68 +921,49 @@ public partial class MainWindow : Window
             return;
         }
 
-        await RunTransferAsync(async progress =>
+        foreach (var path in validPaths)
         {
-            var totalBytes = validPaths.Sum(PathSize);
-            var transferWatch = Stopwatch.StartNew();
-            for (var index = 0; index < validPaths.Length; index++)
-            {
-                var path = validPaths[index];
-                var itemName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+            var itemName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+            var totalBytes = PathSize(path);
+            TransferManager.Instance.Enqueue(
+                _client!,
+                itemName,
+                "Upload",
+                totalBytes,
+                async (client, progress, cancellationToken) =>
+                {
                 if (Directory.Exists(path))
                 {
-                    await _client!.UploadDirectoryAsync(destinationId, path, (name, value) =>
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            var overall = (index + value / 100d) * 100d / validPaths.Length;
-                            OperationStatusText.Text = TransferStatus(
-                                $"Uploading {name}",
-                                totalBytes,
-                                overall,
-                                transferWatch.Elapsed);
-                            progress.Report(overall);
-                        });
-                    });
+                        await client.UploadDirectoryAsync(
+                            destinationId,
+                            path,
+                            (_, value) => progress(value),
+                            cancellationToken);
                 }
                 else
                 {
-                    OperationStatusText.Text = $"Uploading {itemName} to {destinationName}...";
-                    await _client!.UploadAsync(destinationId, path, value =>
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            var overall = (index + value / 100d) * 100d / validPaths.Length;
-                            OperationStatusText.Text = TransferStatus(
-                                $"Uploading {itemName}",
-                                totalBytes,
-                                overall,
-                                transferWatch.Elapsed);
-                            progress.Report(overall);
-                        });
-                    });
+                        await client.UploadAsync(
+                            destinationId,
+                            path,
+                            progress,
+                            cancellationToken);
                 }
-            }
+                },
+                completed: () => _ = RefreshFolderIfCurrentAsync(destinationId));
+        }
 
-            if (_current is not null)
-            {
-                await NavigateAsync(_current, addToHistory: false);
-            }
-            transferWatch.Stop();
-            var average = totalBytes > 0 && transferWatch.Elapsed.TotalSeconds > 0
-                ? $" at {FormatRate(totalBytes / transferWatch.Elapsed.TotalSeconds)}"
-                : string.Empty;
-            OperationStatusText.Text =
-                $"Copied {validPaths.Length} item(s) to {destinationName}{average}.";
-        });
+        ShowTransfersWindow();
+        OperationStatusText.Text =
+            $"Queued {validPaths.Length} item(s) for upload to {destinationName}.";
+        await Task.CompletedTask;
     }
 
     private void FilesHost_DragOver(object sender, DragEventArgs e)
     {
-        var accepted = _busyDepth == 0
-            && _client is not null
+        var accepted = _client is not null
             && _current is not null
-            && e.Data.GetDataPresent(DataFormats.FileDrop);
+            && (e.Data.GetDataPresent(DataFormats.FileDrop)
+                || e.Data.GetDataPresent(RemoteItemsFormat));
         e.Effects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
         DropHint.Visibility = accepted ? Visibility.Visible : Visibility.Collapsed;
         e.Handled = true;
@@ -839,6 +972,15 @@ public partial class MainWindow : Window
     private async void FilesHost_Drop(object sender, DragEventArgs e)
     {
         DropHint.Visibility = Visibility.Collapsed;
+        if (_current is not null
+            && e.Data.GetDataPresent(RemoteItemsFormat)
+            && e.Data.GetData(RemoteItemsFormat) is RemoteItem[] remoteItems)
+        {
+            RemoteClipboard.Set(remoteItems, cut: false);
+            await RemoteClipboard.PasteAsync(_client!, _current.Id);
+            await NavigateAsync(_current, addToHistory: false);
+            return;
+        }
         if (_current is null
             || !e.Data.GetDataPresent(DataFormats.FileDrop)
             || e.Data.GetData(DataFormats.FileDrop) is not string[] paths)
@@ -881,30 +1023,27 @@ public partial class MainWindow : Window
             return;
         }
 
-        await RunTransferAsync(async progress =>
+        foreach (var item in selected)
         {
-            var transferWatch = Stopwatch.StartNew();
-            long totalBytes = 0;
-            await _client!.DownloadSelectionAsync(selected, dialog.FolderName, (name, value, total) =>
-            {
-                totalBytes = total;
-                Dispatcher.Invoke(() =>
+            TransferManager.Instance.Enqueue(
+                _client!,
+                item.Name,
+                "Download",
+                item.Size,
+                async (client, progress, cancellationToken) =>
                 {
-                    OperationStatusText.Text = TransferStatus(
-                        $"Downloading {name}",
-                        total,
-                        value,
-                        transferWatch.Elapsed);
-                    progress.Report(value);
+                    await client.DownloadSelectionAsync(
+                        [item],
+                        dialog.FolderName,
+                        (_, value, _) => progress(value),
+                        cancellationToken);
                 });
-            });
-            transferWatch.Stop();
-            var average = totalBytes > 0 && transferWatch.Elapsed.TotalSeconds > 0
-                ? $" at {FormatRate(totalBytes / transferWatch.Elapsed.TotalSeconds)}"
-                : string.Empty;
-            OperationStatusText.Text =
-                $"Downloaded {selected.Count} item(s) to {dialog.FolderName}{average}.";
-        });
+        }
+
+        ShowTransfersWindow();
+        OperationStatusText.Text =
+            $"Queued {selected.Count} item(s) for download to {dialog.FolderName}.";
+        await Task.CompletedTask;
     }
 
     private async void NewFolderButton_Click(object sender, RoutedEventArgs e)
@@ -1076,6 +1215,13 @@ public partial class MainWindow : Window
                          .OrderByDescending(item => item.IsDirectory)
                          .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
             {
+                item.PropertyChanged += (_, args) =>
+                {
+                    if (args.PropertyName == nameof(RemoteItem.IsChecked))
+                    {
+                        UpdateActionState();
+                    }
+                };
                 _items.Add(item);
             }
 
@@ -1269,6 +1415,10 @@ public partial class MainWindow : Window
 
     private void SelectAllVisibleItems()
     {
+        foreach (var item in _items)
+        {
+            item.IsChecked = true;
+        }
         if (FilesGrid.Visibility == Visibility.Visible)
         {
             FilesGrid.SelectAll();
@@ -1285,6 +1435,11 @@ public partial class MainWindow : Window
 
     private IReadOnlyList<RemoteItem> SelectedItems()
     {
+        var checkedItems = _items.Where(item => item.IsChecked).ToArray();
+        if (checkedItems.Length > 0)
+        {
+            return checkedItems;
+        }
         if (FilesGrid.Visibility == Visibility.Visible)
         {
             return FilesGrid.SelectedItems.Cast<RemoteItem>().ToList();
@@ -1298,6 +1453,11 @@ public partial class MainWindow : Window
 
     private RemoteItem? SelectedItem()
     {
+        var checkedItem = _items.FirstOrDefault(item => item.IsChecked);
+        if (checkedItem is not null)
+        {
+            return checkedItem;
+        }
         return FilesGrid.Visibility == Visibility.Visible
             ? FilesGrid.SelectedItem as RemoteItem
             : FilesList.Visibility == Visibility.Visible
@@ -1320,30 +1480,6 @@ public partial class MainWindow : Window
         finally
         {
             SetBusy(false);
-        }
-    }
-
-    private async Task RunTransferAsync(Func<IProgress<double>, Task> operation)
-    {
-        TransferProgressBar.Value = 0;
-        TransferProgressBar.Visibility = Visibility.Visible;
-        var progress = new Progress<double>(value => TransferProgressBar.Value = value);
-
-        try
-        {
-            SetBusy(true, "Starting transfer...");
-            await operation(progress);
-        }
-        catch (Exception exception)
-        {
-            OperationStatusText.Text = "Transfer failed";
-            ShowError(exception.Message);
-        }
-        finally
-        {
-            SetBusy(false);
-            TransferProgressBar.Visibility = Visibility.Collapsed;
-            DropHint.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -1382,6 +1518,9 @@ public partial class MainWindow : Window
 
         DiscoverButton.IsEnabled = !busy;
         HotspotButton.IsEnabled = !busy;
+        OpenHotspotSettingsButton.IsEnabled = !busy;
+        ConnectDiscoveredButton.IsEnabled =
+            !busy && DiscoveredDevicesCombo.SelectedItem is DiscoveredDevice;
         TrustedDevicesCombo.IsEnabled = !busy;
         SwitchDeviceButton.IsEnabled = !busy && _trustedDevices.Count > 0;
         ConnectButton.IsEnabled = !busy;
@@ -1393,6 +1532,9 @@ public partial class MainWindow : Window
         ForgetDeviceButton.IsEnabled = !busy && ConnectionProfileStore.LoadAll().Count > 0;
 
         DisconnectButton.IsEnabled = connected && !busy;
+        DisconnectButton.Content = connected ? "Disconnect" : "Not connected";
+        DisconnectButton.Style = (Style)FindResource(
+            connected ? "ConnectedDisconnectButton" : "DisconnectedButton");
         RefreshButton.IsEnabled = browsing && !busy;
         BackButton.IsEnabled = browsing && _history.Count > 0 && !busy;
         UpButton.IsEnabled = browsing && _current!.Path.Count > 1 && !busy;
@@ -1405,8 +1547,20 @@ public partial class MainWindow : Window
         OpenMediaButton.IsEnabled = browsing
             && !busy
             && SelectedItem() is { IsDirectory: false };
+        OpenFolderWindowButton.IsEnabled = browsing && !busy;
+        CopySelectionButton.IsEnabled = browsing && !busy && SelectedItems().Count > 0;
+        CutSelectionButton.IsEnabled = browsing && !busy && SelectedItems().Count > 0;
+        PasteButton.IsEnabled = browsing && !busy && RemoteClipboard.HasItems;
         SettingsButton.IsEnabled = !busy;
-        FilesHost.AllowDrop = browsing && !busy;
+        FilesHost.AllowDrop = browsing;
+    }
+
+    private async Task RefreshFolderIfCurrentAsync(string folderId)
+    {
+        if (_current?.Id == folderId)
+        {
+            await NavigateAsync(_current, addToHistory: false);
+        }
     }
 
     private static T? FindDataContext<T>(DependencyObject? source) where T : class
@@ -1456,35 +1610,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string TransferStatus(
-        string operation,
-        long totalBytes,
-        double percent,
-        TimeSpan elapsed)
-    {
-        if (totalBytes <= 0 || percent <= 0 || elapsed.TotalSeconds <= 0)
-        {
-            return $"{operation}... {percent:0}%";
-        }
-
-        var copied = totalBytes * Math.Clamp(percent, 0, 100) / 100d;
-        var bytesPerSecond = copied / elapsed.TotalSeconds;
-        var remainingSeconds = bytesPerSecond > 0
-            ? Math.Max(0, totalBytes - copied) / bytesPerSecond
-            : 0;
-        var eta = remainingSeconds >= 60
-            ? $"{Math.Ceiling(remainingSeconds / 60):0} min remaining"
-            : $"{Math.Ceiling(remainingSeconds):0} sec remaining";
-        return $"{operation}... {percent:0}% | {FormatRate(bytesPerSecond)} | {eta}";
-    }
-
-    private static string FormatRate(double bytesPerSecond)
-    {
-        return bytesPerSecond >= 1024 * 1024
-            ? $"{bytesPerSecond / 1024 / 1024:0.##} MB/s"
-            : $"{bytesPerSecond / 1024:0} KB/s";
-    }
-
     private static string NormalizeFingerprint(string? value)
     {
         return string.IsNullOrWhiteSpace(value)
@@ -1499,6 +1624,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        TransferManager.Instance.Changed -= TransferManager_Changed;
         _thumbnailCancellation?.Cancel();
         _client?.Dispose();
         base.OnClosed(e);

@@ -21,7 +21,11 @@ public sealed class RemoteClient : IDisposable
     };
 
     private readonly HttpClient _httpClient;
+    private readonly string _host;
+    private readonly int _port;
+    private readonly string _token;
     private readonly string _expectedFingerprint;
+    private readonly string _trustedToken;
     private string _connectedFingerprint = string.Empty;
 
     public RemoteClient(
@@ -31,8 +35,12 @@ public sealed class RemoteClient : IDisposable
         string? expectedFingerprint = null,
         string? trustedToken = null)
     {
+        _host = host;
+        _port = port;
+        _token = token;
         var normalizedHost = host.StartsWith('[') || !host.Contains(':') ? host : $"[{host}]";
         _expectedFingerprint = NormalizeFingerprint(expectedFingerprint);
+        _trustedToken = trustedToken ?? string.Empty;
         var handler = new SocketsHttpHandler
         {
             UseProxy = false,
@@ -61,9 +69,12 @@ public sealed class RemoteClient : IDisposable
                 "X-Phone-Transfer-Trusted-Token",
                 trustedToken);
         }
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.6.0");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.0");
         _httpClient.DefaultRequestHeaders.ExpectContinue = false;
     }
+
+    public RemoteClient CreateSibling() =>
+        new(_host, _port, _token, _expectedFingerprint, _trustedToken);
 
     public async Task<string> TrustThisPcAsync(
         string clientId,

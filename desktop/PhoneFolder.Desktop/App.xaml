@@ -58,6 +58,26 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
+        <Style x:Key="NavigationButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#AFC2D8"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Foreground" Value="#24415F"/>
+            <Setter Property="Padding" Value="13,7"/>
+        </Style>
+
+        <Style x:Key="DisconnectedButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#FFF1F1"/>
+            <Setter Property="BorderBrush" Value="#E5A6A6"/>
+            <Setter Property="Foreground" Value="#A13C3C"/>
+        </Style>
+
+        <Style x:Key="ConnectedDisconnectButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#FFF7F7"/>
+            <Setter Property="BorderBrush" Value="#D46A6A"/>
+            <Setter Property="Foreground" Value="#A12626"/>
+        </Style>
+
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="MinHeight" Value="36"/>
