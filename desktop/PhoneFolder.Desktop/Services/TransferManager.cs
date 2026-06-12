@@ -25,9 +25,15 @@ public sealed class TransferManager
         string direction,
         long totalBytes,
         Func<RemoteClient, Action<double>, CancellationToken, Task> operation,
-        Action? completed = null)
+        Action? completed = null,
+        string location = "")
     {
-        var job = new TransferJob(name, direction, totalBytes);
+        var job = new TransferJob(
+            name,
+            direction,
+            totalBytes,
+            sourceClient.DeviceName,
+            location);
         job.PropertyChanged += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
         RunOnUi(() => Jobs.Insert(0, job));
         _ = RunAsync(sourceClient.CreateSibling(), job, operation, completed);

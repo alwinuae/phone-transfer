@@ -5,23 +5,32 @@ namespace PhoneFolder.Desktop.Models;
 
 public sealed class TransferJob : INotifyPropertyChanged
 {
-    private readonly DateTimeOffset _createdAt = DateTimeOffset.UtcNow;
     private readonly CancellationTokenSource _cancellation = new();
+    private DateTimeOffset? _startedAt;
     private double _progress;
     private string _status = "Waiting";
     private string _speed = string.Empty;
     private string _remaining = string.Empty;
     private bool _isComplete;
 
-    public TransferJob(string name, string direction, long totalBytes)
+    public TransferJob(
+        string name,
+        string direction,
+        long totalBytes,
+        string deviceName,
+        string location)
     {
         Name = name;
         Direction = direction;
         TotalBytes = Math.Max(0, totalBytes);
+        DeviceName = deviceName;
+        Location = location;
     }
 
     public string Name { get; }
     public string Direction { get; }
+    public string DeviceName { get; }
+    public string Location { get; }
     public long TotalBytes { get; }
     public string SizeLabel => FormatSize(TotalBytes);
     public CancellationToken CancellationToken => _cancellation.Token;
@@ -58,12 +67,16 @@ public sealed class TransferJob : INotifyPropertyChanged
     }
     public bool CanCancel => !IsComplete && !_cancellation.IsCancellationRequested;
 
-    public void MarkRunning() => Status = "Running";
+    public void MarkRunning()
+    {
+        _startedAt = DateTimeOffset.UtcNow;
+        Status = "Running";
+    }
 
     public void Report(double progress)
     {
         Progress = Math.Clamp(progress, 0, 100);
-        var elapsed = DateTimeOffset.UtcNow - _createdAt;
+        var elapsed = DateTimeOffset.UtcNow - (_startedAt ?? DateTimeOffset.UtcNow);
         if (TotalBytes <= 0 || Progress <= 0 || elapsed.TotalSeconds <= 0)
         {
             Speed = string.Empty;

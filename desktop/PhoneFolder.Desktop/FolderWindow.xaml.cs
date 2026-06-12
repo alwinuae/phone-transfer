@@ -58,16 +58,20 @@ public partial class FolderWindow : Window
     {
         if (!item.IsDirectory)
         {
-            var settings = AppSettingsStore.Load();
-            if (settings.AlwaysOpenInDefaultApplication && (item.IsVideo || item.IsAudio))
+            try
             {
-                DefaultMediaSessionManager.Open(_client, item);
-                return;
+                RemoteFileLauncher.Open(
+                    this,
+                    _client,
+                    item,
+                    _items.Where(candidate => candidate.IsMedia).ToArray(),
+                    status => StatusText.Text = status,
+                    ShowTransfers);
             }
-            MessageBox.Show(
-                this,
-                "Open media and documents from the main window to use its viewer and default-app settings.",
-                "Phone Transfer");
+            catch (Exception exception)
+            {
+                ShowError(exception.Message);
+            }
             return;
         }
 
@@ -130,7 +134,7 @@ public partial class FolderWindow : Window
             ShowError("Check or select one or more items first.");
             return;
         }
-        RemoteClipboard.Set(selected, cut);
+        RemoteClipboard.Set(_client, selected, cut);
         StatusText.Text = $"{(cut ? "Cut" : "Copied")} {selected.Count} item(s).";
     }
 
@@ -225,7 +229,8 @@ public partial class FolderWindow : Window
                     {
                         _ = RefreshAsync();
                     }
-                });
+                },
+                location: Current.Name);
         }
         ShowTransfers();
     }
@@ -257,7 +262,8 @@ public partial class FolderWindow : Window
                         dialog.FolderName,
                         (_, value, _) => progress(value),
                         cancellationToken);
-                });
+                },
+                location: dialog.FolderName);
         }
         ShowTransfers();
     }
@@ -301,7 +307,12 @@ public partial class FolderWindow : Window
             return;
         }
         var data = new DataObject();
-        data.SetData(RemoteItemsFormat, selected.ToArray());
+        data.SetData(
+            RemoteItemsFormat,
+            new RemoteDragPayload(
+                _client.ConnectionKey,
+                _client.DeviceName,
+                selected.ToArray()));
         DragDrop.DoDragDrop(FilesGrid, data, DragDropEffects.Copy | DragDropEffects.Move);
     }
 
@@ -324,11 +335,22 @@ public partial class FolderWindow : Window
             return;
         }
         if (e.Data.GetDataPresent(RemoteItemsFormat)
-            && e.Data.GetData(RemoteItemsFormat) is RemoteItem[] items)
+            && e.Data.GetData(RemoteItemsFormat) is RemoteDragPayload payload)
         {
-            RemoteClipboard.Set(items, cut: false);
-            await RemoteClipboard.PasteAsync(_client, Current.Id);
-            await RefreshAsync();
+            try
+            {
+                RemoteClipboard.Set(
+                    payload.ConnectionKey,
+                    payload.DeviceName,
+                    payload.Items,
+                    cut: false);
+                await RemoteClipboard.PasteAsync(_client, Current.Id);
+                await RefreshAsync();
+            }
+            catch (Exception exception)
+            {
+                ShowError(exception.Message);
+            }
         }
     }
 

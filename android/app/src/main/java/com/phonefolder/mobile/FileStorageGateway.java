@@ -205,6 +205,23 @@ final class FileStorageGateway implements StorageBackend {
     }
 
     @Override
+    public int rotation(String itemId) throws Exception {
+        Item item = item(itemId);
+        if (!item.mimeType.startsWith("video/")) {
+            return 0;
+        }
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(requireFile(itemId).getPath());
+            String value = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
+            return value == null ? 0 : Integer.parseInt(value);
+        } finally {
+            retriever.release();
+        }
+    }
+
+    @Override
     public void delete(String itemId) throws Exception {
         if (ROOT_ID.equals(itemId)) {
             throw new IllegalArgumentException("Internal storage cannot be deleted.");

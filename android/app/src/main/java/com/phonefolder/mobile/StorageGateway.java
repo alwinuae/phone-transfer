@@ -287,6 +287,27 @@ final class StorageGateway implements StorageBackend {
         }
     }
 
+    @Override
+    public int rotation(String itemId) throws Exception {
+        StorageBackend.Item item = item(itemId);
+        if (!item.mimeType.startsWith("video/")) {
+            return 0;
+        }
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try (ParcelFileDescriptor descriptor =
+                     resolver.openFileDescriptor(requireUri(itemId), "r")) {
+            if (descriptor == null) {
+                throw new FileNotFoundException("The video could not be opened.");
+            }
+            retriever.setDataSource(descriptor.getFileDescriptor());
+            String value = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
+            return value == null ? 0 : Integer.parseInt(value);
+        } finally {
+            retriever.release();
+        }
+    }
+
     private Bitmap videoThumbnail(String itemId, int size) throws Exception {
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         try (ParcelFileDescriptor descriptor =

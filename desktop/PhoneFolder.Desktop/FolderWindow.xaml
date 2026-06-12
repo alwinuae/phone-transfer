@@ -52,7 +52,6 @@
             <DataGrid x:Name="FilesGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
-                      IsReadOnly="True"
                       MouseDoubleClick="Files_MouseDoubleClick"
                       PreviewMouseMove="Files_PreviewMouseMove"
                       SelectionMode="Extended"
@@ -69,19 +68,21 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Width="42">
+                    <DataGridTemplateColumn Width="42" IsReadOnly="False">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <CheckBox HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
+                                          AutomationProperties.AutomationId="ItemCheckBox"
+                                          AutomationProperties.Name="{Binding Name}"
                                           IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Name"/>
-                    <DataGridTextColumn Width="150" Binding="{Binding TypeLabel}" Header="Type"/>
-                    <DataGridTextColumn Width="110" Binding="{Binding SizeLabel}" Header="Size"/>
-                    <DataGridTextColumn Width="170" Binding="{Binding ModifiedLabel}" Header="Modified"/>
+                    <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Name" IsReadOnly="True"/>
+                    <DataGridTextColumn Width="150" Binding="{Binding TypeLabel}" Header="Type" IsReadOnly="True"/>
+                    <DataGridTextColumn Width="110" Binding="{Binding SizeLabel}" Header="Size" IsReadOnly="True"/>
+                    <DataGridTextColumn Width="170" Binding="{Binding ModifiedLabel}" Header="Modified" IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>
             <Border x:Name="DropHint"

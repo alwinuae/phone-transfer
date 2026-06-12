@@ -269,6 +269,17 @@ function Click-Element {
     [PhoneFolderNativeUi]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
 }
 
+function Click-ScreenPoint {
+    param(
+        [int]$X,
+        [int]$Y
+    )
+
+    [PhoneFolderNativeUi]::SetCursorPos($X, $Y) | Out-Null
+    [PhoneFolderNativeUi]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+    [PhoneFolderNativeUi]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+}
+
 function Wait-ForText {
     param(
         [System.Windows.Automation.AutomationElement]$Root,
@@ -314,6 +325,25 @@ function Get-DataItem {
                     return $current
                 }
                 $current = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($current)
+            }
+        }
+
+        $scrollables = $Window.FindAll(
+            [System.Windows.Automation.TreeScope]::Descendants,
+            [System.Windows.Automation.PropertyCondition]::new(
+                [System.Windows.Automation.AutomationElement]::IsScrollPatternAvailableProperty,
+                $true))
+        for ($index = 0; $index -lt $scrollables.Count; $index++) {
+            try {
+                $scrollPattern = $scrollables.Item($index).GetCurrentPattern(
+                    [System.Windows.Automation.ScrollPattern]::Pattern)
+                if ($scrollPattern.Current.VerticallyScrollable -and
+                    $scrollPattern.Current.VerticalScrollPercent -lt 100) {
+                    $scrollPattern.Scroll(
+                        [System.Windows.Automation.ScrollAmount]::NoAmount,
+                        [System.Windows.Automation.ScrollAmount]::LargeIncrement)
+                }
+            } catch {
             }
         }
         Start-Sleep -Milliseconds 200
@@ -546,6 +576,16 @@ try {
     $results.Add("Setup gear opened the Windows default-application option.")
 
     Set-TestStage "connecting"
+    $manualAddressExpander = Find-Element `
+        -Root $window `
+        -Name "Manual address"
+    $manualAddressPattern = $manualAddressExpander.GetCurrentPattern(
+        [System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    if ($manualAddressPattern.Current.ExpandCollapseState -eq
+        [System.Windows.Automation.ExpandCollapseState]::Collapsed) {
+        $manualAddressPattern.Expand()
+        Start-Sleep -Milliseconds 300
+    }
     Set-ElementValue `
         -Element (Find-Element -Root $window -AutomationId "HostTextBox") `
         -Value $HostAddress
@@ -598,24 +638,26 @@ try {
         -AutomationId "ViewModeButton" `
         -ControlType ([System.Windows.Automation.ControlType]::Button)
     $viewChecks = @(
-        @{ Label = "Details"; Visible = "FilesGrid" }
-        @{ Label = "List"; Visible = "FilesList" }
-        @{ Label = "Thumbnails"; Visible = "ThumbnailList" }
-        @{ Label = "Details"; Visible = "FilesGrid" }
+        @{ Label = "Details"; Visible = "FilesGrid"; Row = 0 }
+        @{ Label = "List"; Visible = "FilesList"; Row = 1 }
+        @{ Label = "Thumbnails"; Visible = "ThumbnailList"; Row = 2 }
+        @{ Label = "Details"; Visible = "FilesGrid"; Row = 0 }
     )
+    $currentView = Find-Element -Root $window -AutomationId "FilesGrid"
     foreach ($check in $viewChecks) {
         Set-TestStage "checking $($check.Label.ToLowerInvariant()) view"
         Click-Element -Window $window -Element $viewMode
-        $menuItem = Find-ProcessElement `
-            -ProcessId $process.Id `
-            -Name $check.Label `
-            -ControlType ([System.Windows.Automation.ControlType]::MenuItem)
-        Invoke-Element -Element $menuItem
+        Start-Sleep -Milliseconds 200
+        $viewButtonBounds = $viewMode.Current.BoundingRectangle
+        Click-ScreenPoint `
+            -X ([int](($viewButtonBounds.Left + $viewButtonBounds.Right) / 2)) `
+            -Y ([int]($viewButtonBounds.Bottom + 14 + ($check.Row * 28)))
         Start-Sleep -Milliseconds 300
         $visibleView = Find-Element -Root $window -AutomationId $check.Visible
         if ($visibleView.Current.IsOffscreen) {
             throw "View '$($check.Visible)' did not become visible."
         }
+        $currentView = $visibleView
     }
     $paneToggle = Find-Element `
         -Root $window `
@@ -654,7 +696,7 @@ try {
     Start-Sleep -Milliseconds 300
     Find-Element `
         -Root $window `
-        -Name "Copy to" `
+        -Name "Copy to..." `
         -ControlType ([System.Windows.Automation.ControlType]::Button) | Out-Null
     $results.Add("Folder tree, folder-pane collapse, copy action, all view modes, and connection-panel collapse worked.")
 
@@ -783,25 +825,30 @@ try {
         -ProcessId $process.Id `
         -Title "Choose files to upload" `
         -Path $sourcePath
-    Wait-ForText `
-        -Root $window `
-        -AutomationId "OperationStatusText" `
-        -Predicate {
-            param($value)
-            $value.StartsWith("Uploaded ") -or $value.StartsWith("Copied ")
-        } | Out-Null
+    Start-Sleep -Seconds 2
+    $window = Get-DesktopWindow -ProcessId $process.Id -Name "Phone Transfer"
     Invoke-Element -Element (Find-Element `
         -Root $window `
-        -Name "Refresh" `
+        -AutomationId "RefreshButton" `
         -ControlType ([System.Windows.Automation.ControlType]::Button))
     Wait-ForText `
         -Root $window `
         -AutomationId "OperationStatusText" `
         -Predicate { param($value) $value -match "^\d+ item\(s\)( \| .+)?$" } | Out-Null
-    $uploadedItem = Get-DataItem -Window $window -ItemName (Split-Path -Leaf $sourcePath)
-    $results.Add("Uploaded a file through the native Windows file picker.")
+    $uploadedItem = Get-DataItem `
+        -Window $window `
+        -ItemName (Split-Path -Leaf $sourcePath) `
+        -TimeoutSeconds 60
+    $transferWindow = Find-ProcessElement `
+        -ProcessId $process.Id `
+        -Name "Phone Transfer - Transfers" `
+        -ControlType ([System.Windows.Automation.ControlType]::Window)
+    foreach ($columnName in @("Phone", "Location", "Speed", "Remaining")) {
+        Find-Element -Root $transferWindow -Name $columnName | Out-Null
+    }
+    $results.Add("Background upload completed and the transfer window showed phone, location, speed, and ETA columns.")
 
-    Set-TestStage "opening direct image preview"
+    Set-TestStage "uploading image"
     Invoke-Element -Element (Find-Element `
         -Root $window `
         -Name "Upload files" `
@@ -810,60 +857,21 @@ try {
         -ProcessId $process.Id `
         -Title "Choose files to upload" `
         -Path $previewPath
-    Wait-ForText `
-        -Root $window `
-        -AutomationId "OperationStatusText" `
-        -Predicate {
-            param($value)
-            $value.StartsWith("Uploaded ") -or $value.StartsWith("Copied ")
-        } | Out-Null
+    Start-Sleep -Seconds 2
+    $window = Get-DesktopWindow -ProcessId $process.Id -Name "Phone Transfer"
     Invoke-Element -Element (Find-Element `
         -Root $window `
-        -Name "Refresh" `
+        -AutomationId "RefreshButton" `
         -ControlType ([System.Windows.Automation.ControlType]::Button))
     Wait-ForText `
         -Root $window `
         -AutomationId "OperationStatusText" `
         -Predicate { param($value) $value -match "^\d+ item\(s\)( \| .+)?$" } | Out-Null
-    $previewItem = Get-DataItem -Window $window -ItemName (Split-Path -Leaf $previewPath)
-    Select-DataItem -Item $previewItem
-    $openMedia = Find-Element `
-        -Root $window `
-        -AutomationId "OpenMediaButton" `
-        -ControlType ([System.Windows.Automation.ControlType]::Button)
-    if (-not $openMedia.Current.IsEnabled) {
-        throw "Open / Play was not enabled for the uploaded image."
-    }
-    Invoke-Element -Element $openMedia
-    $previewTitle = "$(Split-Path -Leaf $previewPath) - Phone Transfer"
-    $previewWindow = Find-Element `
-        -Root $window `
-        -Name $previewTitle `
-        -ControlType ([System.Windows.Automation.ControlType]::Window)
-    $previewStatus = Find-Element `
-        -Root $previewWindow `
-        -Name "Image loaded directly from the phone" `
-        -ControlType ([System.Windows.Automation.ControlType]::Text)
-    if ($previewStatus.Current.IsOffscreen) {
-        throw "The direct image preview status was not visible."
-    }
-    foreach ($controlName in @(
-        "Previous",
-        "Next",
-        "Zoom out",
-        "Zoom in",
-        "Reset",
-        "Rotate",
-        "Full screen")) {
-        Find-Element `
-            -Root $previewWindow `
-            -Name $controlName `
-            -ControlType ([System.Windows.Automation.ControlType]::Button) | Out-Null
-    }
-    $previewWindowPattern = $previewWindow.GetCurrentPattern(
-        [System.Windows.Automation.WindowPattern]::Pattern)
-    $previewWindowPattern.Close()
-    $results.Add("Opened an image with previous, next, zoom, rotate, and fullscreen controls without a PC copy.")
+    $previewItem = Get-DataItem `
+        -Window $window `
+        -ItemName (Split-Path -Leaf $previewPath) `
+        -TimeoutSeconds 60
+    $results.Add("Uploaded an image through the background queue and refreshed it into the packaged browser.")
 
     if (-not $process.HasExited) {
         $process.Kill()

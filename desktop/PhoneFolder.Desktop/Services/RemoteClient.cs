@@ -26,6 +26,7 @@ public sealed class RemoteClient : IDisposable
     private readonly string _token;
     private readonly string _expectedFingerprint;
     private readonly string _trustedToken;
+    private readonly string _deviceName;
     private string _connectedFingerprint = string.Empty;
 
     public RemoteClient(
@@ -33,7 +34,8 @@ public sealed class RemoteClient : IDisposable
         int port,
         string token,
         string? expectedFingerprint = null,
-        string? trustedToken = null)
+        string? trustedToken = null,
+        string? deviceName = null)
     {
         _host = host;
         _port = port;
@@ -41,6 +43,7 @@ public sealed class RemoteClient : IDisposable
         var normalizedHost = host.StartsWith('[') || !host.Contains(':') ? host : $"[{host}]";
         _expectedFingerprint = NormalizeFingerprint(expectedFingerprint);
         _trustedToken = trustedToken ?? string.Empty;
+        _deviceName = string.IsNullOrWhiteSpace(deviceName) ? host : deviceName.Trim();
         var handler = new SocketsHttpHandler
         {
             UseProxy = false,
@@ -69,12 +72,17 @@ public sealed class RemoteClient : IDisposable
                 "X-Phone-Transfer-Trusted-Token",
                 trustedToken);
         }
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.0");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.1");
         _httpClient.DefaultRequestHeaders.ExpectContinue = false;
     }
 
+    public string DeviceName => _deviceName;
+    public string ConnectionKey => string.IsNullOrEmpty(_expectedFingerprint)
+        ? $"{_host}:{_port}"
+        : _expectedFingerprint;
+
     public RemoteClient CreateSibling() =>
-        new(_host, _port, _token, _expectedFingerprint, _trustedToken);
+        new(_host, _port, _token, _expectedFingerprint, _trustedToken, _deviceName);
 
     public async Task<string> TrustThisPcAsync(
         string clientId,
@@ -379,6 +387,23 @@ public sealed class RemoteClient : IDisposable
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
+    public async Task<int> GetRotationAsync(
+        string itemId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.GetAsync(
+            $"items/{Uri.EscapeDataString(itemId)}/rotation",
+            cancellationToken);
+        if (response.StatusCode is HttpStatusCode.NotFound
+            or HttpStatusCode.MethodNotAllowed)
+        {
+            return 0;
+        }
+        var metadata = await ReadAsync<RotationMetadata>(response, cancellationToken);
+        var normalized = metadata.Rotation % 360;
+        return normalized < 0 ? normalized + 360 : normalized;
+    }
+
     public Task<HttpResponseMessage> OpenContentStreamAsync(
         string itemId,
         string? range,
@@ -592,4 +617,5 @@ public sealed class RemoteClient : IDisposable
     }
 
     private sealed record DownloadPlanItem(RemoteItem Item, string RelativePath);
+    private sealed record RotationMetadata(int Rotation);
 }

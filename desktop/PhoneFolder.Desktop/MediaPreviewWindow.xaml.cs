@@ -35,7 +35,7 @@ public partial class MediaPreviewWindow : Window
         bool autoOpenDefaultApplication = false)
     {
         InitializeComponent();
-        _client = client;
+        _client = client.CreateSibling();
         _autoOpenDefaultApplication = autoOpenDefaultApplication;
         _items = item.IsImage
             ? (folderMedia ?? [item]).Where(candidate => candidate.IsImage).ToArray()
@@ -102,6 +102,10 @@ public partial class MediaPreviewWindow : Window
             }
             else
             {
+                if (item.IsVideo)
+                {
+                    SetRotation(await _client.GetRotationAsync(item.Id));
+                }
                 StartInternalPlayback();
             }
         }
@@ -458,6 +462,7 @@ public partial class MediaPreviewWindow : Window
         Player.Stop();
         await DisposeServerAsync();
         DeletePlaylist();
+        _client.Dispose();
         base.OnClosed(e);
     }
 }

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Phone Transfer Local API
-  version: 0.7.0
+  version: 0.7.1
   description: >
     HTTPS API exposed by the Android companion while sharing is active.
     Except for /info, file requests require either the current access code or
@@ -152,6 +152,25 @@ paths:
             image/jpeg:
               schema: { type: string, format: binary }
         "404": { description: Thumbnail unavailable }
+  /items/{itemId}/rotation:
+    get:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Get the clockwise display rotation stored in video metadata
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Rotation metadata, or zero for non-video items
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rotation]
+                properties:
+                  rotation: { type: integer, enum: [0, 90, 180, 270] }
   /items/{itemId}/upload:
     post:
       security: [{ accessCode: [] }, { trustedDevice: [] }]

@@ -15,7 +15,7 @@ dotnet run --project tests\PhoneFolder.PerformanceTests -c Release -- `
   127.0.0.1 8765 <access-code> artifacts\performance <source-file>
 
 .\scripts\test-windows-ui.ps1 `
-  -ExePath artifacts\release\Phone-Transfer-Windows-v0.7.0.exe `
+  -ExePath artifacts\release\Phone-Transfer-Windows-v0.7.1.exe `
   -HostAddress 127.0.0.1 `
   -AccessCode <access-code>
 ```
@@ -26,6 +26,34 @@ Android release validation:
 cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
+
+## 0.7.1 Verification Summary
+
+- Windows and Android release builds completed with zero .NET warnings and no
+  Android lint errors.
+- Independent folder windows use the same viewer/default-app behavior as the
+  main browser.
+- Transfer timing begins when a job starts, and rows identify the phone and
+  source/destination location.
+- Opening the transfer monitor during an active upload no longer attempts to
+  write into the read-only progress model.
+- Cross-phone clipboard and drag/drop payloads are rejected before a wrong
+  phone receives an invalid item ID.
+- Android video rotation metadata is consumed by the built-in Windows player.
+- The signed APK upgraded in place to version code `11` / version `0.7.1`;
+  Android lint and signature verification passed.
+- Full integration passed TLS pinning, trusted authentication, concurrent
+  requests, recursive transfer, resume, byte-range streaming, thumbnails,
+  rotation metadata, copy, move, rename, delete, and cleanup.
+- The packaged Windows UI passed taskbar branding, router/hotspot controls,
+  trusted reconnect, all three views, resizable/collapsible panes, background
+  transfer monitoring, uploads, SHA-256 integrity, and automatic reconnect.
+- A random 5 MiB sample averaged 21.54 MiB/s upload and 26.33 MiB/s download
+  through the emulator/ADB forwarding path.
+- Silent install, quiet uninstall, and final reinstall exited with code `0`.
+  Installed Apps registered `Phone Transfer` version `0.7.1`, publisher
+  `Alwin Thomas`, icon, normal uninstall, and quiet uninstall; the install
+  directory contained only the app and Inno Setup uninstaller files.
 
 ## 0.7.0 Verification Summary
 

@@ -265,7 +265,8 @@
                                 DockPanel.Dock="Right"
                                 Margin="14,0,0,0"
                                 Click="ViewModeButton_Click"
-                                Content="View: Details">
+                                Content="View: Details"
+                                ToolTip="Change view (Ctrl+1 Details, Ctrl+2 List, Ctrl+3 Thumbnails)">
                             <Button.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Click="ViewDetails_Click" Header="Details"/>
@@ -376,26 +377,28 @@
                                   CanUserAddRows="False"
                                   CanUserDeleteRows="False"
                                   HeadersVisibility="Column"
-                                  IsReadOnly="True"
                                   MouseDoubleClick="Items_MouseDoubleClick"
                                   PreviewMouseMove="Items_PreviewMouseMove"
                                   SelectionChanged="Items_SelectionChanged"
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow">
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Width="42" Header="">
+                                <DataGridTemplateColumn Width="42" Header="" IsReadOnly="False">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <CheckBox HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
+                                                      AutomationProperties.AutomationId="ItemCheckBox"
+                                                      AutomationProperties.Name="{Binding Name}"
+                                                      Click="ItemCheckBox_Click"
                                                       IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Name"/>
-                                <DataGridTextColumn Width="150" Binding="{Binding TypeLabel}" Header="Type"/>
-                                <DataGridTextColumn Width="110" Binding="{Binding SizeLabel}" Header="Size"/>
-                                <DataGridTextColumn Width="170" Binding="{Binding ModifiedLabel}" Header="Modified"/>
+                                <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Name" IsReadOnly="True"/>
+                                <DataGridTextColumn Width="150" Binding="{Binding TypeLabel}" Header="Type" IsReadOnly="True"/>
+                                <DataGridTextColumn Width="110" Binding="{Binding SizeLabel}" Header="Size" IsReadOnly="True"/>
+                                <DataGridTextColumn Width="170" Binding="{Binding ModifiedLabel}" Header="Modified" IsReadOnly="True"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -416,6 +419,9 @@
                                         </Grid.ColumnDefinitions>
                                         <CheckBox HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
+                                                  AutomationProperties.AutomationId="ItemCheckBox"
+                                                  AutomationProperties.Name="{Binding Name}"
+                                                  Click="ItemCheckBox_Click"
                                                   IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Name}"/>
                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding TypeLabel}"/>
@@ -449,6 +455,9 @@
                                             <CheckBox HorizontalAlignment="Left"
                                                       VerticalAlignment="Top"
                                                       Panel.ZIndex="2"
+                                                      AutomationProperties.AutomationId="ItemCheckBox"
+                                                      AutomationProperties.Name="{Binding Name}"
+                                                      Click="ItemCheckBox_Click"
                                                       IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <Border Background="#F4F7FB" CornerRadius="5">
                                                 <Grid>

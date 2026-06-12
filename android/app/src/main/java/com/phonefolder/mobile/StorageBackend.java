@@ -15,6 +15,7 @@ interface StorageBackend {
     Item move(String itemId, String destinationParentId) throws Exception;
     Item copy(String itemId, String destinationParentId) throws Exception;
     byte[] thumbnail(String itemId, int requestedSize) throws Exception;
+    int rotation(String itemId) throws Exception;
     void delete(String itemId) throws Exception;
 
     final class Item {

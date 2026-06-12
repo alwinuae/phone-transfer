@@ -315,6 +315,10 @@ try
         thumbnail is { Length: > 2 } && thumbnail[0] == 0xff && thumbnail[1] == 0xd8,
         "The image thumbnail endpoint did not return a JPEG.");
     checks.Add("Image thumbnail generation returned a valid JPEG preview.");
+    Require(
+        await client.GetRotationAsync(previewItem.Id) == 0,
+        "Non-video rotation metadata was not normalized to zero.");
+    checks.Add("Media rotation metadata endpoint returned a normalized value.");
 
     await client.RenameAsync(uploadedAlpha.Id, "alpha-renamed.txt");
     uploadedChildren = await client.GetChildrenAsync(uploadedRootItem.Id);

@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Phone Transfer - Transfers"
         Icon="Assets/PhoneTransfer.ico"
-        Width="850"
+        Width="1080"
         Height="430"
-        MinWidth="680"
+        MinWidth="820"
         MinHeight="320"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="18">
@@ -27,14 +27,18 @@
                   IsReadOnly="True"
                   SelectionMode="Single">
             <DataGrid.Columns>
+                <DataGridTextColumn Width="135" Binding="{Binding DeviceName}" Header="Phone"/>
                 <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Item"/>
                 <DataGridTextColumn Width="90" Binding="{Binding Direction}" Header="Direction"/>
+                <DataGridTextColumn Width="150" Binding="{Binding Location}" Header="Location"/>
                 <DataGridTextColumn Width="90" Binding="{Binding SizeLabel}" Header="Size"/>
                 <DataGridTemplateColumn Width="170" Header="Progress">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Grid Margin="4">
-                                <ProgressBar Height="12" Maximum="100" Value="{Binding Progress}"/>
+                                <ProgressBar Height="12"
+                                             Maximum="100"
+                                             Value="{Binding Progress, Mode=OneWay}"/>
                                 <TextBlock HorizontalAlignment="Center"
                                            FontSize="10"
                                            Text="{Binding Progress, StringFormat={}{0:0}%}"/>

@@ -1,5 +1,20 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.1
+
+- Complete file opening and streaming from independent folder windows.
+- Device-isolated multi-phone clipboard and drag/drop operations.
+- Device and location labels in the concurrent transfer monitor.
+- Accurate speed and ETA timing after a queued transfer actually starts.
+- Automatic built-in video orientation from Android rotation metadata.
+
+## Shipped In 0.7.0
+
+- Three-job concurrent background transfer queue with cancellation and history.
+- Separate router Wi-Fi and PC Mobile Hotspot discovery/connection workflows.
+- Independent folder windows with multi-item drag/drop and copy/cut/paste.
+- Windows Store-compliant per-user installer registration and silent setup.
+
 ## Shipped In 0.6.0
 
 - Setup gear and persistent Windows default-application preference.
@@ -56,7 +71,7 @@
 ## Future Expansion
 
 - Native Wi-Fi Direct negotiation without manual hotspot setup.
-- Parallel active sessions and transfer queues for multiple phones.
+- Cross-phone direct transfer without first downloading to Windows.
 - Selective folder synchronization and backup profiles.
 - Photo timeline, metadata search, and persistent thumbnail cache.
 - Windows Explorer shell integration.

@@ -2,12 +2,10 @@ using Microsoft.Win32;
 using PhoneFolder.Desktop.Models;
 using PhoneFolder.Desktop.Services;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -65,7 +63,8 @@ public partial class MainWindow : Window
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var alt = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
-        if (Keyboard.FocusedElement is TextBox && key != Key.Escape)
+        var isViewShortcut = control && key is Key.D1 or Key.D2 or Key.D3;
+        if (Keyboard.FocusedElement is TextBox && key != Key.Escape && !isViewShortcut)
         {
             return;
         }
@@ -120,6 +119,21 @@ public partial class MainWindow : Window
         else if (control && key == Key.V)
         {
             PasteButton_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (control && key == Key.D1)
+        {
+            await SetViewModeAsync("Details");
+            e.Handled = true;
+        }
+        else if (control && key == Key.D2)
+        {
+            await SetViewModeAsync("List");
+            e.Handled = true;
+        }
+        else if (control && key == Key.D3)
+        {
+            await SetViewModeAsync("Thumbnails");
             e.Handled = true;
         }
         else if (key == Key.Enter && SelectedItem() is { } selected)
@@ -421,7 +435,8 @@ public partial class MainWindow : Window
                 endpoint.Port,
                 token,
                 info.CertificateFingerprint,
-                trustedToken);
+                trustedToken,
+                info.Name);
             HostTextBox.Text = endpoint.Host;
             PortTextBox.Text = endpoint.Port.ToString();
             ConnectionStatusText.Text = $"Connected to {info.Name}";
@@ -699,6 +714,15 @@ public partial class MainWindow : Window
     private void Items_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
         UpdateActionState();
 
+    private void ItemCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox { DataContext: RemoteItem item } checkBox)
+        {
+            item.IsChecked = checkBox.IsChecked == true;
+        }
+        UpdateActionState();
+    }
+
     private void Items_PreviewMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed)
@@ -711,7 +735,12 @@ public partial class MainWindow : Window
             return;
         }
         var data = new DataObject();
-        data.SetData(RemoteItemsFormat, selected.ToArray());
+        data.SetData(
+            RemoteItemsFormat,
+            new RemoteDragPayload(
+                _client!.ConnectionKey,
+                _client.DeviceName,
+                selected.ToArray()));
         DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Copy | DragDropEffects.Move);
     }
 
@@ -745,7 +774,7 @@ public partial class MainWindow : Window
             ShowError("Check or select one or more files or folders first.");
             return;
         }
-        RemoteClipboard.Set(selected, cut);
+        RemoteClipboard.Set(_client!, selected, cut);
         OperationStatusText.Text = $"{(cut ? "Cut" : "Copied")} {selected.Count} item(s).";
         UpdateActionState();
     }
@@ -790,82 +819,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        var alwaysUseDefault = AppSettingsStore.Load().AlwaysOpenInDefaultApplication;
-        var mediaItems = _items.Where(candidate => candidate.IsMedia).ToArray();
-        if (alwaysUseDefault)
+        try
         {
-            if (item.IsVideo || item.IsAudio)
-            {
-                try
-                {
-                    DefaultMediaSessionManager.Open(_client, item);
-                    OperationStatusText.Text =
-                        $"Streaming {item.Name} in the Windows default application.";
-                }
-                catch (Exception exception)
-                {
-                    ShowError(exception.Message);
-                }
-                return;
-            }
-
-            await OpenDownloadedFileAsync(item);
-            return;
-        }
-
-        if (item.IsMedia)
-        {
-            var preview = new MediaPreviewWindow(
+            RemoteFileLauncher.Open(
+                this,
                 _client,
                 item,
-                mediaItems)
-            {
-                Owner = this
-            };
-            preview.Show();
-            return;
+                _items.Where(candidate => candidate.IsMedia).ToArray(),
+                status => OperationStatusText.Text = status,
+                ShowTransfersWindow);
         }
-
-        await OpenDownloadedFileAsync(item);
-    }
-
-    private async Task OpenDownloadedFileAsync(RemoteItem item)
-    {
-        var cacheDirectory = Path.Combine(
-            Path.GetTempPath(),
-            "Phone Transfer",
-            "Opened Files",
-            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-                $"{item.Id}\n{item.ModifiedAt}\n{item.Size}"))));
-        var destination = Path.Combine(
-            cacheDirectory,
-            FileNameSanitizer.Sanitize(item.Name));
-
-        if (File.Exists(destination)
-            && new FileInfo(destination).Length == item.Size)
+        catch (Exception exception)
         {
-            Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
-            OperationStatusText.Text = $"Opened {item.Name} in the Windows default application.";
-            return;
+            ShowError(exception.Message);
         }
-
-        TransferManager.Instance.Enqueue(
-            _client!,
-            item.Name,
-            "Download",
-            item.Size,
-            async (client, progress, cancellationToken) =>
-            {
-                await client.DownloadAsync(item, destination, progress, cancellationToken);
-            },
-            completed: () =>
-            {
-                Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
-                OperationStatusText.Text =
-                    $"Opened {item.Name} in the Windows default application.";
-            });
-        ShowTransfersWindow();
-        OperationStatusText.Text = $"Queued {item.Name} for opening.";
         await Task.CompletedTask;
     }
 
@@ -949,7 +916,8 @@ public partial class MainWindow : Window
                             cancellationToken);
                 }
                 },
-                completed: () => _ = RefreshFolderIfCurrentAsync(destinationId));
+                completed: () => _ = RefreshFolderIfCurrentAsync(destinationId),
+                location: destinationName);
         }
 
         ShowTransfersWindow();
@@ -974,11 +942,22 @@ public partial class MainWindow : Window
         DropHint.Visibility = Visibility.Collapsed;
         if (_current is not null
             && e.Data.GetDataPresent(RemoteItemsFormat)
-            && e.Data.GetData(RemoteItemsFormat) is RemoteItem[] remoteItems)
+            && e.Data.GetData(RemoteItemsFormat) is RemoteDragPayload payload)
         {
-            RemoteClipboard.Set(remoteItems, cut: false);
-            await RemoteClipboard.PasteAsync(_client!, _current.Id);
-            await NavigateAsync(_current, addToHistory: false);
+            try
+            {
+                RemoteClipboard.Set(
+                    payload.ConnectionKey,
+                    payload.DeviceName,
+                    payload.Items,
+                    cut: false);
+                await RemoteClipboard.PasteAsync(_client!, _current.Id);
+                await NavigateAsync(_current, addToHistory: false);
+            }
+            catch (Exception exception)
+            {
+                ShowError(exception.Message);
+            }
             return;
         }
         if (_current is null
@@ -1037,7 +1016,8 @@ public partial class MainWindow : Window
                         dialog.FolderName,
                         (_, value, _) => progress(value),
                         cancellationToken);
-                });
+                },
+                location: dialog.FolderName);
         }
 
         ShowTransfersWindow();
@@ -1301,6 +1281,7 @@ public partial class MainWindow : Window
             return;
         }
         ViewModeButton.ContextMenu.PlacementTarget = ViewModeButton;
+        ViewModeButton.ContextMenu.Placement = PlacementMode.Bottom;
         ViewModeButton.ContextMenu.IsOpen = true;
     }
 

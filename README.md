@@ -4,22 +4,26 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.7.0
+## Version 0.7.1
 
 - Background transfer queue with up to three concurrent uploads/downloads.
-- Transfer window with per-job progress, speed, ETA, cancellation, and history.
+- Transfer window with phone, location, progress, speed, ETA, cancellation, and history.
 - Separate router Wi-Fi and PC hotspot discovery workflows.
 - Passive Android announcements improve discovery on restrictive Wi-Fi routers.
 - Multiple independent folder windows with drag/drop and copy/cut/paste.
+- Files open and stream from every independent folder window.
+- Cross-phone clipboard mistakes are blocked with a clear recovery message.
 - Checkbox selection works across Details, List, and Thumbnail views.
 - Windows default-app mode bypasses the Phone Transfer player completely.
 - Explicit Windows Installed Apps publisher and uninstall registration.
 - Explorer-style browsing with folder tree, Details, List, and Thumbnail views.
+- Ctrl+1, Ctrl+2, and Ctrl+3 switch Details, List, and Thumbnail views.
 - Drag-and-drop upload, recursive transfer, resume, copy, move, rename, and delete.
 - Optional Windows default-app opening for documents, images, audio, and video.
 - In-app image zoom, previous/next, rotation, and fullscreen controls.
 - In-app video/audio streaming with seek, rotate, and fullscreen controls.
 - Orientation-correct image and video thumbnails.
+- Video playback starts with the phone's stored rotation metadata.
 - Resizable/collapsible folder navigation and Explorer keyboard shortcuts.
 - Optional Android full shared-storage access or one approved-folder mode.
 - Android Quick Settings start/stop tile.
@@ -67,9 +71,9 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-v0.7.0.exe
-artifacts/release/Phone-Transfer-Windows-Setup-v0.7.0.exe
-artifacts/release/Phone-Transfer-Android-v0.7.0.apk
+artifacts/release/Phone-Transfer-Windows-v0.7.1.exe
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.1.exe
+artifacts/release/Phone-Transfer-Android-v0.7.1.apk
 artifacts/release/SHA256SUMS.txt
 ```
 
@@ -83,11 +87,12 @@ dotnet run --project .\tests\PhoneFolder.PerformanceTests `
   -c Release -- <host> 8765 <access-code> .\artifacts\performance <source-file>
 
 .\scripts\test-windows-ui.ps1 `
-  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.7.0.exe `
+  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.7.1.exe `
   -AccessCode <access-code>
 ```
 
 See [release notes](docs/RELEASE_NOTES.md),
 [requirements](docs/PRODUCT_REQUIREMENTS.md),
 [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md), and the
-[local API](protocol/openapi.yaml).
+[local API](protocol/openapi.yaml). The delivered user-request checklist is in
+[the requirement audit](docs/REQUIREMENT_AUDIT.md).

@@ -197,7 +197,7 @@ final class PhoneFolderServer implements Closeable {
         if ("/api/v1/info".equals(path) && "GET".equals(request.method)) {
             String json = "{"
                     + "\"name\":\"" + JsonUtil.escape(deviceName) + "\","
-                    + "\"version\":\"0.7.0\","
+                    + "\"version\":\"0.7.1\","
                     + "\"protocolVersion\":1,"
                     + "\"port\":" + HTTP_PORT + ","
                     + "\"transport\":\"https\","
@@ -286,6 +286,16 @@ final class PhoneFolderServer implements Closeable {
             if (parts.length == 6 && "thumbnail".equals(parts[5]) && "GET".equals(request.method)) {
                 int size = parseThumbnailSize(query.get("size"));
                 writeBytes(output, 200, "OK", "image/jpeg", storage.thumbnail(itemId, size), keepAlive);
+                return;
+            }
+
+            if (parts.length == 6 && "rotation".equals(parts[5]) && "GET".equals(request.method)) {
+                writeJson(
+                        output,
+                        200,
+                        "OK",
+                        "{\"rotation\":" + storage.rotation(itemId) + "}",
+                        keepAlive);
                 return;
             }
 
