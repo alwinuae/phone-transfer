@@ -188,11 +188,14 @@ final class StorageGateway implements StorageBackend {
     }
 
     public StorageBackend.Item move(String itemId, String destinationParentId) throws Exception {
+        synchronized (this) {
+            return moveLocked(itemId, destinationParentId);
+        }
+    }
+
+    private StorageBackend.Item moveLocked(String itemId, String destinationParentId) throws Exception {
         if (ROOT_ID.equals(itemId)) {
             throw new IllegalArgumentException("The shared root cannot be moved.");
-        }
-        if (itemId.equals(destinationParentId)) {
-            throw new IllegalArgumentException("An item cannot be moved into itself.");
         }
 
         Entry source = requireEntry(itemId);
@@ -206,20 +209,59 @@ final class StorageGateway implements StorageBackend {
         if (destinationParentId.equals(source.parentId)) {
             return metadata(itemId, source.uri);
         }
-
-        Uri moved = DocumentsContract.moveDocument(
-                resolver,
-                source.uri,
-                requireUri(source.parentId),
-                destination.uri);
-        if (moved == null) {
-            throw new IllegalStateException("This storage provider does not support moving this item.");
+        if (itemId.equals(destinationParentId)
+                || isDescendant(destinationParentId, itemId)) {
+            throw new IllegalArgumentException("A folder cannot be moved into itself.");
         }
-        items.put(itemId, new Entry(moved, destinationParentId));
-        return metadata(itemId, moved);
+
+        StorageBackend.Item sourceItem = metadata(itemId, source.uri);
+        String destinationName = KeepBothNameResolver.resolve(
+                sourceItem.name,
+                sourceItem.directory,
+                children(destinationParentId));
+
+        if (destinationName.equals(sourceItem.name)) {
+            Uri moved = null;
+            try {
+                moved = DocumentsContract.moveDocument(
+                        resolver,
+                        source.uri,
+                        requireUri(source.parentId),
+                        destination.uri);
+            } catch (Exception ignored) {
+                // Fall back to a provider-independent copy and delete.
+            }
+            if (moved != null) {
+                Uri exact = ensureDisplayName(moved, destinationName);
+                items.put(itemId, new Entry(exact, destinationParentId));
+                return metadata(itemId, exact);
+            }
+        }
+
+        StorageBackend.Item copied = copyInto(
+                itemId,
+                sourceItem,
+                destinationParentId,
+                destinationName);
+        try {
+            delete(itemId);
+            return copied;
+        } catch (Exception exception) {
+            try {
+                delete(copied.id);
+            } catch (Exception ignored) {
+            }
+            throw exception;
+        }
     }
 
     public StorageBackend.Item copy(String itemId, String destinationParentId) throws Exception {
+        synchronized (this) {
+            return copyLocked(itemId, destinationParentId);
+        }
+    }
+
+    private StorageBackend.Item copyLocked(String itemId, String destinationParentId) throws Exception {
         if (ROOT_ID.equals(itemId)) {
             throw new IllegalArgumentException("The shared root cannot be copied.");
         }
@@ -234,49 +276,37 @@ final class StorageGateway implements StorageBackend {
             throw new IllegalArgumentException("The copy destination must be a folder.");
         }
 
-        try {
-            Uri copied = DocumentsContract.copyDocument(
-                    resolver,
-                    source.uri,
-                    destination.uri);
-            if (copied != null) {
-                String copiedId = remember(copied, destinationParentId);
-                return metadata(copiedId, copied);
-            }
-        } catch (Exception ignored) {
-            // Some document providers do not implement native copy.
-        }
-
         StorageBackend.Item sourceItem = metadata(itemId, source.uri);
-        if (!sourceItem.directory) {
-            try (InputStream input = openForRead(itemId)) {
-                return upload(
-                        destinationParentId,
-                        sourceItem.name,
-                        input,
-                        sourceItem.size);
-            }
-        }
-
-        StorageBackend.Item copiedFolder = createFolder(destinationParentId, sourceItem.name);
-        for (StorageBackend.Item child : children(itemId)) {
-            copy(child.id, copiedFolder.id);
-        }
-        return copiedFolder;
+        String destinationName = KeepBothNameResolver.resolve(
+                sourceItem.name,
+                sourceItem.directory,
+                children(destinationParentId));
+        return copyInto(itemId, sourceItem, destinationParentId, destinationName);
     }
 
     public byte[] thumbnail(String itemId, int requestedSize) throws Exception {
         StorageBackend.Item item = item(itemId);
         if (item.directory
                 || (!item.mimeType.startsWith("image/")
-                    && !item.mimeType.startsWith("video/"))) {
+                    && !item.mimeType.startsWith("video/")
+                    && !DocumentThumbnailRenderer.supports(item.name, item.mimeType))) {
             throw new FileNotFoundException("A thumbnail is not available for this item.");
         }
 
         int size = Math.max(64, Math.min(512, requestedSize));
-        Bitmap bitmap = item.mimeType.startsWith("video/")
-                ? videoThumbnail(itemId, size)
-                : imageThumbnail(itemId, size);
+        Bitmap bitmap;
+        if (item.mimeType.startsWith("video/")) {
+            bitmap = videoThumbnail(itemId, size);
+        } else if (item.mimeType.startsWith("image/")) {
+            bitmap = imageThumbnail(itemId, size);
+        } else {
+            bitmap = DocumentThumbnailRenderer.render(
+                    resolver,
+                    requireUri(itemId),
+                    item.name,
+                    item.mimeType,
+                    size);
+        }
         try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)) {
                 throw new IllegalStateException("The image thumbnail could not be encoded.");
@@ -306,6 +336,56 @@ final class StorageGateway implements StorageBackend {
         } finally {
             retriever.release();
         }
+    }
+
+    @Override
+    public StorageStats storageStats() throws Exception {
+        String scopeName = root().name;
+        String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
+        String expectedRootId = treeDocumentId;
+        int separator = expectedRootId.indexOf(':');
+        if (separator >= 0) {
+            expectedRootId = expectedRootId.substring(0, separator);
+        }
+
+        String[] columns = {
+                DocumentsContract.Root.COLUMN_ROOT_ID,
+                DocumentsContract.Root.COLUMN_TITLE,
+                DocumentsContract.Root.COLUMN_CAPACITY_BYTES,
+                DocumentsContract.Root.COLUMN_AVAILABLE_BYTES
+        };
+        try (Cursor cursor = resolver.query(
+                DocumentsContract.buildRootsUri(treeUri.getAuthority()),
+                columns,
+                null,
+                null,
+                null)) {
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    String rootId = cursor.isNull(0) ? "" : cursor.getString(0);
+                    if (!rootId.equals(expectedRootId)
+                            && !treeDocumentId.startsWith(rootId + ":")) {
+                        continue;
+                    }
+                    if (!cursor.isNull(1)) {
+                        scopeName = cursor.getString(1);
+                    }
+                    Long totalBytes = nullableNonNegativeLong(cursor, 2);
+                    Long availableBytes = nullableNonNegativeLong(cursor, 3);
+                    Long usedBytes = totalBytes != null && availableBytes != null
+                            ? Math.max(0, totalBytes - availableBytes)
+                            : null;
+                    return new StorageStats(
+                            totalBytes,
+                            availableBytes,
+                            usedBytes,
+                            scopeName);
+                }
+            }
+        } catch (Exception ignored) {
+            // Providers may omit root capacity metadata even when file access works.
+        }
+        return new StorageStats(null, null, null, scopeName);
     }
 
     private Bitmap videoThumbnail(String itemId, int size) throws Exception {
@@ -362,6 +442,111 @@ final class StorageGateway implements StorageBackend {
         } catch (Exception ignored) {
             return bitmap;
         }
+    }
+
+    private StorageBackend.Item copyInto(
+            String sourceItemId,
+            StorageBackend.Item sourceItem,
+            String destinationParentId,
+            String destinationName) throws Exception {
+        if (!sourceItem.directory) {
+            try (InputStream input = openForRead(sourceItemId)) {
+                return createFileExact(
+                        destinationParentId,
+                        destinationName,
+                        sourceItem.mimeType,
+                        input,
+                        sourceItem.size);
+            }
+        }
+
+        StorageBackend.Item copiedFolder = createFolderExact(
+                destinationParentId,
+                destinationName);
+        try {
+            for (StorageBackend.Item child : children(sourceItemId)) {
+                copyInto(child.id, child, copiedFolder.id, child.name);
+            }
+            return copiedFolder;
+        } catch (Exception exception) {
+            try {
+                delete(copiedFolder.id);
+            } catch (Exception ignored) {
+            }
+            throw exception;
+        }
+    }
+
+    private StorageBackend.Item createFileExact(
+            String parentId,
+            String name,
+            String mimeType,
+            InputStream input,
+            long length) throws Exception {
+        Uri created = createDocumentExact(parentId, mimeType, name);
+        boolean completed = false;
+        try (ParcelFileDescriptor descriptor = resolver.openFileDescriptor(created, "w")) {
+            if (descriptor == null) {
+                throw new FileNotFoundException("The destination file could not be opened.");
+            }
+            try (OutputStream output = new BufferedOutputStream(
+                    new FileOutputStream(descriptor.getFileDescriptor()),
+                    TRANSFER_BUFFER_SIZE)) {
+                copy(input, output, length);
+                completed = true;
+            }
+        } finally {
+            if (!completed) {
+                try {
+                    DocumentsContract.deleteDocument(resolver, created);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        String copiedId = remember(created, parentId);
+        return metadata(copiedId, created);
+    }
+
+    private StorageBackend.Item createFolderExact(String parentId, String name) throws Exception {
+        Uri created = createDocumentExact(
+                parentId,
+                DocumentsContract.Document.MIME_TYPE_DIR,
+                name);
+        String copiedId = remember(created, parentId);
+        return metadata(copiedId, created);
+    }
+
+    private Uri createDocumentExact(String parentId, String mimeType, String name) throws Exception {
+        Uri created = DocumentsContract.createDocument(
+                resolver,
+                requireUri(parentId),
+                mimeType,
+                name);
+        if (created == null) {
+            throw new IllegalStateException("The destination item could not be created.");
+        }
+        try {
+            return ensureDisplayName(created, name);
+        } catch (Exception exception) {
+            try {
+                DocumentsContract.deleteDocument(resolver, created);
+            } catch (Exception ignored) {
+            }
+            throw exception;
+        }
+    }
+
+    private Uri ensureDisplayName(Uri uri, String expectedName) throws Exception {
+        StorageBackend.Item current = metadata("pending", uri);
+        if (expectedName.equals(current.name)) {
+            return uri;
+        }
+        Uri renamed = DocumentsContract.renameDocument(resolver, uri, expectedName);
+        if (renamed == null || !expectedName.equals(metadata("pending", renamed).name)) {
+            throw new IllegalStateException(
+                    "The storage provider could not preserve the destination name.");
+        }
+        return renamed;
     }
 
     private boolean isDescendant(String candidateId, String ancestorId) {
@@ -488,6 +673,14 @@ final class StorageGateway implements StorageBackend {
                 || name.contains("/") || name.contains("\\") || name.indexOf('\0') >= 0) {
             throw new IllegalArgumentException("The file or folder name is not valid.");
         }
+    }
+
+    private static Long nullableNonNegativeLong(Cursor cursor, int column) {
+        if (cursor.isNull(column)) {
+            return null;
+        }
+        long value = cursor.getLong(column);
+        return value < 0 ? null : value;
     }
 
     private static void copy(InputStream input, OutputStream output, long expectedLength) throws Exception {

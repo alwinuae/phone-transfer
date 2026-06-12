@@ -42,12 +42,24 @@ var alphaPath = Path.Combine(sourceDirectory, "alpha.txt");
 var betaPath = Path.Combine(nestedSource, "beta.bin");
 var emptyPath = Path.Combine(sourceDirectory, "empty.bin");
 var unicodePath = Path.Combine(nestedSource, "unicode-\u0928\u092e\u0938\u094d\u0924\u0947-\u4f60\u597d.txt");
+var pdfPath = Path.Combine(sourceDirectory, "preview.pdf");
+var wordPath = Path.Combine(sourceDirectory, "preview.docx");
+var excelPath = Path.Combine(sourceDirectory, "preview.xlsx");
+var powerPointPath = Path.Combine(sourceDirectory, "preview.pptx");
+var textPreviewPath = Path.Combine(sourceDirectory, "preview-notes.txt");
+var archivePath = Path.Combine(sourceDirectory, "preview.zip");
 await File.WriteAllTextAsync(alphaPath, $"PhoneFolder integration test {runId}\n");
 var betaBytes = new byte[2 * 1024 * 1024 + 173];
 new Random(78123).NextBytes(betaBytes);
 await File.WriteAllBytesAsync(betaPath, betaBytes);
 await File.WriteAllBytesAsync(emptyPath, []);
 await File.WriteAllTextAsync(unicodePath, "Unicode filename and contents: \u0928\u092e\u0938\u094d\u0924\u0947 \u4f60\u597d\n");
+await File.WriteAllBytesAsync(pdfPath, CreateMinimalPdf());
+await File.WriteAllTextAsync(wordPath, "Document thumbnail placeholder");
+await File.WriteAllTextAsync(excelPath, "Spreadsheet thumbnail placeholder");
+await File.WriteAllTextAsync(powerPointPath, "Presentation thumbnail placeholder");
+await File.WriteAllTextAsync(textPreviewPath, "Text thumbnail placeholder");
+await File.WriteAllBytesAsync(archivePath, [0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
 RemoteItem? uploadedRoot = null;
 var checks = new List<string>();
@@ -116,6 +128,32 @@ try
     Require(roots.Count > 0, "The phone returned no shared roots.");
     var root = roots[0];
 
+    using (var rawClient = CreateRawClient(host, port, token))
+    using (var storageResponse = await rawClient.GetAsync("storage"))
+    {
+        Require(storageResponse.IsSuccessStatusCode, "The authenticated storage endpoint failed.");
+        using var storageJson = JsonDocument.Parse(
+            await storageResponse.Content.ReadAsByteArrayAsync());
+        var storageRoot = storageJson.RootElement;
+        Require(
+            storageRoot.GetProperty("scopeName").GetString()?.Length > 0,
+            "The storage endpoint returned no scope name.");
+        ValidateNullableCapacity(storageRoot, "totalBytes");
+        ValidateNullableCapacity(storageRoot, "availableBytes");
+        ValidateNullableCapacity(storageRoot, "usedBytes");
+        if (storageRoot.GetProperty("totalBytes").ValueKind == JsonValueKind.Number
+                && storageRoot.GetProperty("availableBytes").ValueKind == JsonValueKind.Number
+                && storageRoot.GetProperty("usedBytes").ValueKind == JsonValueKind.Number)
+        {
+            var total = storageRoot.GetProperty("totalBytes").GetInt64();
+            var available = storageRoot.GetProperty("availableBytes").GetInt64();
+            var used = storageRoot.GetProperty("usedBytes").GetInt64();
+            Require(total >= available, "Storage available bytes exceeded total bytes.");
+            Require(used == total - available, "Storage used bytes did not equal total minus available.");
+        }
+    }
+    checks.Add("Authenticated storage utilization returned a valid known-or-null capacity model.");
+
     await client.UploadDirectoryAsync(root.Id, sourceDirectory, (_, _) => { });
     var rootChildren = await client.GetChildrenAsync(root.Id);
     uploadedRoot = rootChildren.SingleOrDefault(item =>
@@ -171,6 +209,13 @@ try
     {
         Require(response.StatusCode == HttpStatusCode.Unauthorized, "A protected endpoint accepted no access code.");
     }
+    using (var unauthenticatedClient = CreateRawClient(host, port))
+    using (var response = await unauthenticatedClient.GetAsync("storage"))
+    {
+        Require(
+            response.StatusCode == HttpStatusCode.Unauthorized,
+            "The storage utilization endpoint accepted no access code.");
+    }
 
     using (var rawClient = CreateRawClient(host, port, token))
     {
@@ -186,6 +231,18 @@ try
             rawClient.PostAsync($"items/{uploadedRootItem.Id}/folder?name=.", null),
             HttpStatusCode.BadRequest,
             "An invalid dot folder name was accepted.");
+        await RequireStatusAsync(
+            rawClient.PostAsync(
+                $"items/{uploadedNested.Id}/copy?parentId={Uri.EscapeDataString(uploadedNested.Id)}",
+                null),
+            HttpStatusCode.BadRequest,
+            "A folder was allowed to copy into itself.");
+        await RequireStatusAsync(
+            rawClient.PostAsync(
+                $"items/{uploadedNested.Id}/move?parentId={Uri.EscapeDataString(uploadedNested.Id)}",
+                null),
+            HttpStatusCode.BadRequest,
+            "A folder was allowed to move into itself.");
         using (var unsupported = new HttpRequestMessage(HttpMethod.Put, $"items/{uploadedRootItem.Id}"))
         {
             await RequireStatusAsync(
@@ -285,13 +342,35 @@ try
     var copiedDestination = Path.Combine(artifactRoot, $"copied-beta-{runId}.bin");
     await client.DownloadAsync(copiedBeta, copiedDestination, _ => { });
     Require(Hash(betaPath) == Hash(copiedDestination), "Copying the remote folder changed file contents.");
-    checks.Add("Recursive phone-side copy preserved nested file contents.");
+    var copiedNestedAgain = await client.CopyAsync(uploadedNested.Id, copyTarget.Id);
+    Require(
+        copiedNestedAgain.Name == "Nested (2)",
+        $"Repeated folder copy used '{copiedNestedAgain.Name}' instead of Explorer-style keep-both naming.");
+    var copiedNestedAgainChildren = await client.GetChildrenAsync(copiedNestedAgain.Id);
+    Require(
+        copiedNestedAgainChildren.Any(item => item.Name == "beta.bin"),
+        "The keep-both folder copy did not preserve its nested file.");
+
+    var sameFolderCopy = await client.CopyAsync(uploadedAlpha.Id, uploadedRootItem.Id);
+    Require(
+        sameFolderCopy.Name == "alpha (2).txt",
+        $"Same-folder copy used '{sameFolderCopy.Name}' instead of 'alpha (2).txt'.");
+    var sameFolderMove = await client.MoveAsync(uploadedAlpha.Id, uploadedRootItem.Id);
+    Require(
+        sameFolderMove.Id == uploadedAlpha.Id && sameFolderMove.Name == uploadedAlpha.Name,
+        "Moving an item within its current folder was not a no-op.");
+    checks.Add("Copy conflicts used deterministic keep-both names and same-folder move was a no-op.");
 
     var moveTarget = await client.CreateFolderAsync(uploadedRootItem.Id, "Move target");
-    await client.MoveAsync(uploadedBeta.Id, moveTarget.Id);
+    var conflictingBeta = await client.CopyAsync(uploadedBeta.Id, moveTarget.Id);
+    Require(conflictingBeta.Name == "beta.bin", "The move-conflict fixture used an unexpected name.");
+    var movedResult = await client.MoveAsync(uploadedBeta.Id, moveTarget.Id);
+    Require(
+        movedResult.Name == "beta (2).bin",
+        $"Conflicting move used '{movedResult.Name}' instead of 'beta (2).bin'.");
     nestedChildren = await client.GetChildrenAsync(uploadedNested.Id);
     var movedChildren = await client.GetChildrenAsync(moveTarget.Id);
-    var movedBeta = movedChildren.SingleOrDefault(item => item.Name == "beta.bin")
+    var movedBeta = movedChildren.SingleOrDefault(item => item.Name == "beta (2).bin")
         ?? throw new InvalidOperationException("The moved file was not listed in its destination.");
     Require(
         nestedChildren.All(item => item.Id != uploadedBeta.Id),
@@ -299,7 +378,10 @@ try
     var movedDestination = Path.Combine(artifactRoot, $"moved-beta-{runId}.bin");
     await client.DownloadAsync(movedBeta, movedDestination, _ => { });
     Require(Hash(betaPath) == Hash(movedDestination), "Moving the remote file changed its contents.");
-    checks.Add("Remote move changed folders without changing file contents.");
+    Require(
+        movedChildren.Count(item => item.Name.StartsWith("beta", StringComparison.Ordinal)) == 2,
+        "The move conflict did not preserve both destination files.");
+    checks.Add("Conflicting remote move kept both files without changing their contents.");
 
     var previewPath = Path.Combine(artifactRoot, $"thumbnail-{runId}.png");
     await File.WriteAllBytesAsync(
@@ -315,6 +397,26 @@ try
         thumbnail is { Length: > 2 } && thumbnail[0] == 0xff && thumbnail[1] == 0xd8,
         "The image thumbnail endpoint did not return a JPEG.");
     checks.Add("Image thumbnail generation returned a valid JPEG preview.");
+    uploadedChildren = await client.GetChildrenAsync(uploadedRootItem.Id);
+    foreach (var documentName in new[]
+             {
+                 Path.GetFileName(pdfPath),
+                 Path.GetFileName(wordPath),
+                 Path.GetFileName(excelPath),
+                 Path.GetFileName(powerPointPath),
+                 Path.GetFileName(textPreviewPath),
+                 Path.GetFileName(archivePath)
+             })
+    {
+        var documentItem = uploadedChildren.Single(item => item.Name == documentName);
+        var documentThumbnail = await client.GetThumbnailAsync(documentItem.Id);
+        Require(
+            documentThumbnail is { Length: > 2 }
+            && documentThumbnail[0] == 0xff
+            && documentThumbnail[1] == 0xd8,
+            $"The {documentName} thumbnail endpoint did not return a JPEG.");
+    }
+    checks.Add("PDF, Word, Excel, PowerPoint, text, and archive previews returned JPEG thumbnails.");
     Require(
         await client.GetRotationAsync(previewItem.Id) == 0,
         "Non-video rotation metadata was not normalized to zero.");
@@ -477,6 +579,60 @@ static string Hash(string path)
 {
     using var stream = File.OpenRead(path);
     return Convert.ToHexString(SHA256.HashData(stream));
+}
+
+static void ValidateNullableCapacity(JsonElement storage, string propertyName)
+{
+    var value = storage.GetProperty(propertyName);
+    Require(
+        value.ValueKind is JsonValueKind.Null or JsonValueKind.Number,
+        $"Storage {propertyName} was neither a number nor null.");
+    if (value.ValueKind == JsonValueKind.Number)
+    {
+        Require(value.GetInt64() >= 0, $"Storage {propertyName} was negative.");
+    }
+}
+
+static byte[] CreateMinimalPdf()
+{
+    var streamText = "BT /F1 22 Tf 36 110 Td (Phone Transfer PDF preview) Tj ET\n";
+    var objects = new[]
+    {
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 180] "
+            + "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+        $"<< /Length {Encoding.ASCII.GetByteCount(streamText)} >>\nstream\n{streamText}endstream",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    };
+
+    using var output = new MemoryStream();
+    WriteAscii(output, "%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n");
+    var offsets = new List<long> { 0 };
+    for (var index = 0; index < objects.Length; index++)
+    {
+        offsets.Add(output.Position);
+        WriteAscii(output, $"{index + 1} 0 obj\n{objects[index]}\nendobj\n");
+    }
+
+    var xrefOffset = output.Position;
+    WriteAscii(output, $"xref\n0 {objects.Length + 1}\n");
+    WriteAscii(output, "0000000000 65535 f \n");
+    for (var index = 1; index < offsets.Count; index++)
+    {
+        WriteAscii(output, $"{offsets[index]:D10} 00000 n \n");
+    }
+    WriteAscii(
+        output,
+        $"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\n"
+        + $"startxref\n{xrefOffset}\n%%EOF\n");
+    return output.ToArray();
+}
+
+static void WriteAscii(Stream output, string value)
+{
+    var bytes = Encoding.Latin1.GetBytes(value);
+    output.Write(bytes);
 }
 
 static void Require(bool condition, string message)

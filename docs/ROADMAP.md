@@ -1,5 +1,20 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.2
+
+- Notepad++-inspired dark desktop theme and supported dark Windows title bars.
+- Responsive fixed-height button toolbars across changing window dimensions.
+- Six Explorer-style view modes in main and independent folder windows.
+- Sorting by name, date, type, and size plus standard right-click menus.
+- Compact browser, trusted-phone, and transfer rows.
+- PDF and Office-document thumbnails plus phone storage utilization.
+- Keep-both handling for copy/move name conflicts.
+- Independent window lifetime and activation when another window closes.
+- Updated Windows, Android launcher, in-app, and Quick Settings branding.
+- Installer-only Windows release packaging; no portable release artifact.
+- Contained transfer percentage labels inside the progress track.
+- Automated multi-width WPF layout and command-state regression coverage.
+
 ## Shipped In 0.7.1
 
 - Complete file opening and streaming from independent folder windows.

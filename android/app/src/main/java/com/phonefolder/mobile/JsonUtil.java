@@ -33,6 +33,19 @@ final class JsonUtil {
         return "{\"code\":\"" + escape(code) + "\",\"message\":\"" + escape(message) + "\"}";
     }
 
+    static String storage(StorageBackend.StorageStats storage) {
+        return "{"
+                + "\"totalBytes\":" + nullableLong(storage.totalBytes) + ","
+                + "\"availableBytes\":" + nullableLong(storage.availableBytes) + ","
+                + "\"usedBytes\":" + nullableLong(storage.usedBytes) + ","
+                + "\"scopeName\":\"" + escape(storage.scopeName) + "\""
+                + "}";
+    }
+
+    private static String nullableLong(Long value) {
+        return value == null ? "null" : Long.toString(value);
+    }
+
     static String escape(String input) {
         if (input == null) {
             return "";

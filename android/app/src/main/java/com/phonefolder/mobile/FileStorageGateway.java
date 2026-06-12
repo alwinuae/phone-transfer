@@ -22,9 +22,11 @@ import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 final class FileStorageGateway implements StorageBackend {
@@ -143,38 +145,50 @@ final class FileStorageGateway implements StorageBackend {
     }
 
     @Override
-    public Item move(String itemId, String destinationParentId) throws Exception {
+    public synchronized Item move(String itemId, String destinationParentId) throws Exception {
         if (ROOT_ID.equals(itemId)) {
             throw new IllegalArgumentException("Internal storage cannot be moved.");
         }
         Entry source = requireEntry(itemId);
-        File destination = requireInsideRoot(
-                new File(requireDirectory(destinationParentId), source.file.getName()));
-        if (destination.exists()) {
-            throw new IllegalArgumentException(
-                    "The destination already contains an item with this name.");
+        File destinationParent = requireDirectory(destinationParentId);
+        if (source.file.getParentFile().getCanonicalFile().equals(destinationParent)) {
+            return metadata(itemId, source.file);
         }
+        if (source.file.isDirectory()
+                && (destinationParent.equals(source.file)
+                    || destinationParent.getPath().startsWith(
+                            source.file.getPath() + File.separator))) {
+            throw new IllegalArgumentException("A folder cannot be moved into itself.");
+        }
+
+        String destinationName = keepBothName(
+                destinationParent,
+                source.file.getName(),
+                source.file.isDirectory());
+        File destination = requireInsideRoot(new File(destinationParent, destinationName));
         Files.move(source.file.toPath(), destination.toPath());
         items.put(itemId, new Entry(destination, destinationParentId));
         return metadata(itemId, destination);
     }
 
     @Override
-    public Item copy(String itemId, String destinationParentId) throws Exception {
+    public synchronized Item copy(String itemId, String destinationParentId) throws Exception {
         if (ROOT_ID.equals(itemId)) {
             throw new IllegalArgumentException("Internal storage cannot be copied.");
         }
         Entry source = requireEntry(itemId);
         File destinationParent = requireDirectory(destinationParentId);
-        File destination = requireInsideRoot(new File(destinationParent, source.file.getName()));
-        if (destination.exists()) {
-            throw new IllegalArgumentException(
-                    "The destination already contains an item with this name.");
-        }
         if (source.file.isDirectory()
-                && destination.getPath().startsWith(source.file.getPath() + File.separator)) {
+                && (destinationParent.equals(source.file)
+                    || destinationParent.getPath().startsWith(
+                            source.file.getPath() + File.separator))) {
             throw new IllegalArgumentException("A folder cannot be copied into itself.");
         }
+        String destinationName = keepBothName(
+                destinationParent,
+                source.file.getName(),
+                source.file.isDirectory());
+        File destination = requireInsideRoot(new File(destinationParent, destinationName));
         copyRecursively(source.file, destination);
         String copiedId = remember(destination, destinationParentId);
         return metadata(copiedId, destination);
@@ -185,13 +199,20 @@ final class FileStorageGateway implements StorageBackend {
         Item item = item(itemId);
         if (item.directory
                 || (!item.mimeType.startsWith("image/")
-                    && !item.mimeType.startsWith("video/"))) {
+                    && !item.mimeType.startsWith("video/")
+                    && !DocumentThumbnailRenderer.supports(item.name, item.mimeType))) {
             throw new FileNotFoundException("A thumbnail is not available for this item.");
         }
         int size = Math.max(64, Math.min(512, requestedSize));
-        Bitmap bitmap = item.mimeType.startsWith("video/")
-                ? videoFrame(requireFile(itemId), size)
-                : imageThumbnail(requireFile(itemId), size);
+        File file = requireFile(itemId);
+        Bitmap bitmap;
+        if (item.mimeType.startsWith("video/")) {
+            bitmap = videoFrame(file, size);
+        } else if (item.mimeType.startsWith("image/")) {
+            bitmap = imageThumbnail(file, size);
+        } else {
+            bitmap = DocumentThumbnailRenderer.render(file, item.mimeType, size);
+        }
         try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             if (bitmap == null || !bitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)) {
                 throw new FileNotFoundException("A thumbnail could not be created.");
@@ -219,6 +240,14 @@ final class FileStorageGateway implements StorageBackend {
         } finally {
             retriever.release();
         }
+    }
+
+    @Override
+    public StorageStats storageStats() {
+        long totalBytes = Math.max(0, root.getTotalSpace());
+        long availableBytes = Math.max(0, root.getUsableSpace());
+        long usedBytes = Math.max(0, totalBytes - availableBytes);
+        return new StorageStats(totalBytes, availableBytes, usedBytes, "Internal storage");
     }
 
     @Override
@@ -385,6 +414,19 @@ final class FileStorageGateway implements StorageBackend {
                 || name.contains("/") || name.contains("\\") || name.indexOf('\0') >= 0) {
             throw new IllegalArgumentException("The file or folder name is not valid.");
         }
+    }
+
+    private static String keepBothName(File parent, String name, boolean directory)
+            throws FileNotFoundException {
+        File[] siblings = parent.listFiles();
+        if (siblings == null) {
+            throw new FileNotFoundException("Android did not allow this folder to be listed.");
+        }
+        Set<String> existing = new HashSet<>();
+        for (File sibling : siblings) {
+            existing.add(sibling.getName().toLowerCase(Locale.ROOT));
+        }
+        return KeepBothNameResolver.resolve(name, directory, existing);
     }
 
     private static void copy(InputStream input, OutputStream output, long expectedLength) throws Exception {

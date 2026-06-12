@@ -14,10 +14,14 @@ dotnet run --project tests\PhoneFolder.IntegrationTests -c Release -- `
 dotnet run --project tests\PhoneFolder.PerformanceTests -c Release -- `
   127.0.0.1 8765 <access-code> artifacts\performance <source-file>
 
+dotnet run --project tests\PhoneFolder.UiLayoutTests -c Release
+
 .\scripts\test-windows-ui.ps1 `
-  -ExePath artifacts\release\Phone-Transfer-Windows-v0.7.1.exe `
+  -ExePath artifacts\publish\windows\PhoneTransfer.exe `
   -HostAddress 127.0.0.1 `
   -AccessCode <access-code>
+
+.\tests\Validate-ReleasePackaging.ps1 -RequireBuiltArtifacts
 ```
 
 Android release validation:
@@ -26,6 +30,51 @@ Android release validation:
 cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
+
+## 0.7.2 Verification Summary
+
+- The full .NET solution builds with zero warnings and zero errors.
+- Android release lint and compilation completed with zero errors.
+- WPF layout regression passes main-window widths of 1040, 1180, 1380, and
+  1600 pixels and folder-window widths of 720, 800, 980, and 1200 pixels.
+- Toolbar buttons retain their fixed height and minimum width, wrap cleanly,
+  stay inside their parent panels, and never intersect another button.
+- Main and folder windows expose all six Explorer-style views and sorting by
+  name, date modified, type, and size.
+- Browser, trusted-phone, and transfer tables use compact 26-pixel rows.
+- Window-lifecycle checks verify closing one window keeps the others open and
+  activates the most recently used remaining window.
+- Selection-state checks verify all bulk actions start disabled, single
+  selection enables Rename, multiple selection disables Rename, and Paste
+  tracks Phone Transfer clipboard contents.
+- Full Android/Windows integration passed TLS pinning, trusted authentication,
+  storage utilization, recursive transfer, resume, byte ranges, keep-both
+  copy/move conflicts, PDF/Office/text/archive previews, rotation metadata,
+  rename, delete, and cleanup.
+- The exact 5 MiB sample averaged 47.58 MiB/s upload and 41.56 MiB/s download
+  through the emulator/ADB forwarding path.
+- Android UI verification passed the updated rounded launcher/in-app logo,
+  foreground sharing notification, and active Quick Settings tile with the
+  matching laptop-and-phone mark.
+- Packaged Windows UI verification passed the taskbar icon, dark theme, router
+  and hotspot controls, all six views, name/date/type/size sorting, compact
+  trusted list, create/rename, background transfer monitor, image upload,
+  SHA-256 download integrity, cleanup, and trusted automatic reconnect.
+- Silent install, quiet uninstall, and final reinstall exited with code `0`.
+  Installed Apps registered Phone Transfer version `0.7.2`, publisher
+  `Alwin Thomas`, display icon, normal uninstall, and quiet uninstall.
+- Release packaging produced only the Setup EXE and signed APK, with exactly
+  those two files in `SHA256SUMS.txt`.
+- The MSIX development-identity pipeline packed and unpacked successfully with
+  Microsoft Windows SDK Build Tools. A submission package still requires the
+  exact Partner Center package identity name and publisher values.
+- Progress-template checks verify a 42% fill has the expected width and its
+  percentage text remains fully contained within the progress bar.
+- Network diagnostics, hotspot adapter filtering, trusted-phone persistence,
+  and default-application preference tests pass.
+- The interactive Windows capture helper was unavailable because its bundled
+  `@oai/sky` runtime rejected an internal package export. Deterministic WPF
+  layout tests were used for the affected visual checks.
 
 ## 0.7.1 Verification Summary
 

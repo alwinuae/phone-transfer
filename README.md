@@ -4,8 +4,25 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.7.1
+## Version 0.7.2
 
+- Sleek Notepad++-inspired dark desktop theme with dark Windows title bars.
+- Responsive fixed-height toolbars wrap cleanly without shrinking or overlap.
+- Main and independent folder windows support Details, List, Tiles, and small,
+  medium, or large icon views.
+- Compact details rows show more files in browser, trusted-phone, and transfer
+  tables.
+- Explorer-style sorting is available by name, date modified, type, and size.
+- Right-click menus expose Open, Refresh, Copy, Cut, Paste, Move, Rename,
+  Delete, Sort, and View commands.
+- Phone storage usage and available space are visible while connected.
+- PDF and common Office/document files receive generated thumbnail previews.
+- Duplicate copy/move conflicts keep both items with numbered names.
+- Closing one of several Phone Transfer windows keeps and activates the most
+  recently used remaining window.
+- Copy, cut, paste, copy-to, move-to, rename, delete, and download follow
+  standard selection-aware enabled/disabled behavior.
+- Transfer percentages are centered and clipped inside a taller progress bar.
 - Background transfer queue with up to three concurrent uploads/downloads.
 - Transfer window with phone, location, progress, speed, ETA, cancellation, and history.
 - Separate router Wi-Fi and PC hotspot discovery workflows.
@@ -13,11 +30,11 @@ Windows Mobile Hotspot. File contents stay on the local network.
 - Multiple independent folder windows with drag/drop and copy/cut/paste.
 - Files open and stream from every independent folder window.
 - Cross-phone clipboard mistakes are blocked with a clear recovery message.
-- Checkbox selection works across Details, List, and Thumbnail views.
+- Checkbox selection works across all six Explorer-style views.
 - Windows default-app mode bypasses the Phone Transfer player completely.
 - Explicit Windows Installed Apps publisher and uninstall registration.
-- Explorer-style browsing with folder tree, Details, List, and Thumbnail views.
-- Ctrl+1, Ctrl+2, and Ctrl+3 switch Details, List, and Thumbnail views.
+- Explorer-style browsing with folder tree and six view modes.
+- Ctrl+1 through Ctrl+6 switch between the six file views.
 - Drag-and-drop upload, recursive transfer, resume, copy, move, rename, and delete.
 - Optional Windows default-app opening for documents, images, audio, and video.
 - In-app image zoom, previous/next, rotation, and fullscreen controls.
@@ -31,7 +48,7 @@ Windows Mobile Hotspot. File contents stay on the local network.
 - Multiple-phone switching with per-phone trust enable/disable and removal.
 - Live speed, progress, and ETA for upload and download.
 - Router and Windows 5 GHz Mobile Hotspot modes.
-- Installable Windows setup, portable Windows executable, and signed Android APK.
+- Installable Windows setup and signed Android APK.
 - Rounded Windows branding and Android adaptive launcher icon.
 
 ## Quick Start
@@ -71,9 +88,8 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-v0.7.1.exe
-artifacts/release/Phone-Transfer-Windows-Setup-v0.7.1.exe
-artifacts/release/Phone-Transfer-Android-v0.7.1.apk
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.2.exe
+artifacts/release/Phone-Transfer-Android-v0.7.2.apk
 artifacts/release/SHA256SUMS.txt
 ```
 
@@ -86,13 +102,18 @@ dotnet run --project .\tests\PhoneFolder.IntegrationTests `
 dotnet run --project .\tests\PhoneFolder.PerformanceTests `
   -c Release -- <host> 8765 <access-code> .\artifacts\performance <source-file>
 
+dotnet run --project .\tests\PhoneFolder.UiLayoutTests -c Release
+
 .\scripts\test-windows-ui.ps1 `
-  -ExePath .\artifacts\release\Phone-Transfer-Windows-v0.7.1.exe `
+  -ExePath .\artifacts\publish\windows\PhoneTransfer.exe `
   -AccessCode <access-code>
+
+.\tests\Validate-ReleasePackaging.ps1 -RequireBuiltArtifacts
 ```
 
 See [release notes](docs/RELEASE_NOTES.md),
 [requirements](docs/PRODUCT_REQUIREMENTS.md),
 [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md), and the
 [local API](protocol/openapi.yaml). The delivered user-request checklist is in
-[the requirement audit](docs/REQUIREMENT_AUDIT.md).
+[the requirement audit](docs/REQUIREMENT_AUDIT.md). Microsoft Store signing
+and MSIX migration steps are in [the Store guide](docs/MICROSOFT_STORE.md).

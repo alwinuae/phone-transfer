@@ -1,46 +1,52 @@
-# Phone Transfer 0.7.1
+# Phone Transfer 0.7.2
 
-Phone Transfer 0.7.1 completes the user-request audit and closes the remaining
-multi-window, multi-phone, transfer-accounting, and playback-orientation gaps.
+Phone Transfer 0.7.2 is a focused Windows usability and visual-quality release.
 
 ## New And Improved
 
-- Router Wi-Fi and PC Mobile Hotspot now have separate discovery and connection
-  controls. Android also advertises itself periodically while sharing.
-- Uploads and downloads run in the background through independent connections.
-  Up to three jobs can run concurrently while all browsing remains available.
-- The Transfers window tracks each job's progress, speed, remaining time,
-  completion state, phone, destination, and cancellation independently.
-- Queue waiting time is excluded from speed and remaining-time calculations.
-- The transfer monitor progress binding is explicitly one-way, preventing the
-  window from closing the app when the first background job is displayed.
-- Folders can be opened in separate windows for side-by-side navigation.
-  Checkbox selection, drag/drop, and shared copy/cut/paste support multi-item
-  workflows between those windows.
-- Images, media, and documents can now be opened from every independent folder
-  window. Viewer sessions keep their own phone connection.
-- Clipboard and drag payloads carry the source-phone identity, preventing an
-  item ID from one phone being pasted into another phone by mistake.
-- Details-view checkbox cells remain editable while file metadata columns stay
-  read-only, restoring checkbox multi-selection in main and folder windows.
-- The Android API exposes video rotation metadata so the built-in Windows
-  player starts videos in their recorded orientation.
-- Enabling **Always open files in the Windows default application** completely
-  bypasses the Phone Transfer player.
-- Disconnected state, navigation outlines, connection grouping, and button
-  labels have been clarified.
-- The installer now registers explicit app name, version, publisher, icon, and
-  uninstall information in Windows Installed Apps and supports silent setup
-  with `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-`.
-- Desktop, Android launcher, in-app, and Quick Settings branding remains based
-  on the supplied laptop-to-phone logo.
+- Added a sleek Notepad++-inspired charcoal theme across Windows, forms,
+  buttons, tables, lists, menus, selection states, disabled states, and
+  supported Windows title bars.
+- Rebuilt the main and folder toolbars with fixed-height controls and true
+  wrapping. Buttons no longer shrink, lose spacing, or overlap while resizing.
+- Added Details, List, Tiles, Small icons, Medium icons, and Large icons to the
+  main browser and every independent folder window.
+- Added sorting by name, date modified, type, and size, with ascending and
+  descending directions.
+- Reduced browser, trusted-phone, and transfer rows to 26 pixels.
+- Added standard right-click Open, Refresh, clipboard, file-management, Sort,
+  and View commands.
+- Added PDF and common Office/document thumbnail previews.
+- Added connected-phone storage usage and available-space visibility.
+- Copy and move conflicts now retain both files with deterministic numbered
+  names instead of failing.
+- Closing one of several Phone Transfer windows now leaves the others active
+  and brings the most recently used remaining window forward.
+- Copy, Cut, Download, Copy to, Move to, Rename, Delete, and Paste now follow
+  standard selection rules. Rename requires exactly one item, while Paste is
+  available only when the Phone Transfer clipboard contains items.
+- Added Copy to, Move to, and Rename operations to independent folder windows.
+- Moved the transfer percentage into a taller custom progress track where it
+  remains centered, legible, and clipped within the bar.
+- Added automated WPF regression checks at multiple main and folder window
+  widths, including overlap, sizing, view availability, command states, and
+  progress rendering.
+- Replaced Windows, Android launcher, in-app, and Quick Settings branding with
+  the supplied laptop-and-phone logo.
+- This release publishes only the installable Windows Setup EXE and signed APK;
+  no portable Windows package is created.
 
 ## Installation
 
-1. Install `Phone-Transfer-Android-v0.7.1.apk`.
-2. Install `Phone-Transfer-Windows-Setup-v0.7.1.exe`.
-3. Start sharing on Android, then choose either Router Wi-Fi or PC hotspot on
-   Windows. Trusting the phone once enables future access-code-free reconnect.
+1. Install `Phone-Transfer-Android-v0.7.2.apk`.
+2. Install `Phone-Transfer-Windows-Setup-v0.7.2.exe`.
+3. Start sharing on Android, then connect through router Wi-Fi or Windows
+   Mobile Hotspot. Existing trusted-device profiles remain compatible.
 
 The Android package ID and signing key remain compatible with prior releases.
 The Windows files are not Authenticode-signed and may trigger SmartScreen.
+
+The GitHub Setup EXE remains unsigned. Do not resubmit that EXE to the Microsoft
+Store under policy 10.2.9. Use the Trusted Signing workflow or build an MSIX
+with the exact Partner Center identity values documented in
+`docs/MICROSOFT_STORE.md`.

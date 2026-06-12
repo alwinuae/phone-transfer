@@ -7,7 +7,7 @@
         Height="430"
         MinWidth="820"
         MinHeight="320"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterScreen">
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -25,7 +25,8 @@
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   IsReadOnly="True"
-                  SelectionMode="Single">
+                  SelectionMode="Single"
+                  Style="{StaticResource CompactDataGrid}">
             <DataGrid.Columns>
                 <DataGridTextColumn Width="135" Binding="{Binding DeviceName}" Header="Phone"/>
                 <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Item"/>
@@ -35,14 +36,11 @@
                 <DataGridTemplateColumn Width="170" Header="Progress">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Grid Margin="4">
-                                <ProgressBar Height="12"
-                                             Maximum="100"
-                                             Value="{Binding Progress, Mode=OneWay}"/>
-                                <TextBlock HorizontalAlignment="Center"
-                                           FontSize="10"
-                                           Text="{Binding Progress, StringFormat={}{0:0}%}"/>
-                            </Grid>
+                            <ProgressBar Height="18"
+                                         Margin="3,1"
+                                         Maximum="100"
+                                         Tag="{Binding Progress, StringFormat={}{0:0}%}"
+                                         Value="{Binding Progress, Mode=OneWay}"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

@@ -310,6 +310,28 @@ function Get-DataItem {
 
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     do {
+        $dataItems = $Window.FindAll(
+            [System.Windows.Automation.TreeScope]::Descendants,
+            [System.Windows.Automation.PropertyCondition]::new(
+                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                [System.Windows.Automation.ControlType]::DataItem))
+        for ($index = 0; $index -lt $dataItems.Count; $index++) {
+            $dataItem = $dataItems.Item($index)
+            $exactName = $dataItem.Current.Name -eq $ItemName
+            $combinedName = $dataItem.Current.Name -like "$ItemName,*"
+            if ($exactName -or $combinedName) {
+                return $dataItem
+            }
+            $namedDescendant = $dataItem.FindFirst(
+                [System.Windows.Automation.TreeScope]::Descendants,
+                [System.Windows.Automation.PropertyCondition]::new(
+                    [System.Windows.Automation.AutomationElement]::NameProperty,
+                    $ItemName))
+            if ($null -ne $namedDescendant) {
+                return $dataItem
+            }
+        }
+
         $namedElement = $null
         try {
             $namedElement = Find-Element `
@@ -638,20 +660,25 @@ try {
         -AutomationId "ViewModeButton" `
         -ControlType ([System.Windows.Automation.ControlType]::Button)
     $viewChecks = @(
-        @{ Label = "Details"; Visible = "FilesGrid"; Row = 0 }
-        @{ Label = "List"; Visible = "FilesList"; Row = 1 }
-        @{ Label = "Thumbnails"; Visible = "ThumbnailList"; Row = 2 }
-        @{ Label = "Details"; Visible = "FilesGrid"; Row = 0 }
+        @{ Label = "Details"; Visible = "FilesGrid" }
+        @{ Label = "List"; Visible = "FilesList" }
+        @{ Label = "Tiles"; Visible = "ThumbnailList" }
+        @{ Label = "Small icons"; Visible = "ThumbnailList" }
+        @{ Label = "Medium icons"; Visible = "ThumbnailList" }
+        @{ Label = "Large icons"; Visible = "ThumbnailList" }
+        @{ Label = "Details"; Visible = "FilesGrid" }
     )
     $currentView = Find-Element -Root $window -AutomationId "FilesGrid"
     foreach ($check in $viewChecks) {
         Set-TestStage "checking $($check.Label.ToLowerInvariant()) view"
         Click-Element -Window $window -Element $viewMode
         Start-Sleep -Milliseconds 200
-        $viewButtonBounds = $viewMode.Current.BoundingRectangle
-        Click-ScreenPoint `
-            -X ([int](($viewButtonBounds.Left + $viewButtonBounds.Right) / 2)) `
-            -Y ([int]($viewButtonBounds.Bottom + 14 + ($check.Row * 28)))
+        $viewMenuItem = Find-ProcessElement `
+            -ProcessId $process.Id `
+            -Name $check.Label `
+            -ControlType ([System.Windows.Automation.ControlType]::MenuItem) `
+            -TimeoutSeconds 3
+        Invoke-Element -Element $viewMenuItem
         Start-Sleep -Milliseconds 300
         $visibleView = Find-Element -Root $window -AutomationId $check.Visible
         if ($visibleView.Current.IsOffscreen) {
@@ -659,6 +686,22 @@ try {
         }
         $currentView = $visibleView
     }
+    $sortMode = Find-Element `
+        -Root $window `
+        -AutomationId "SortModeButton" `
+        -ControlType ([System.Windows.Automation.ControlType]::Button)
+    foreach ($sortLabel in @("Size", "Date modified", "Type", "Name")) {
+        Click-Element -Window $window -Element $sortMode
+        Start-Sleep -Milliseconds 200
+        $sortMenuItem = Find-ProcessElement `
+            -ProcessId $process.Id `
+            -Name $sortLabel `
+            -ControlType ([System.Windows.Automation.ControlType]::MenuItem) `
+            -TimeoutSeconds 3
+        Invoke-Element -Element $sortMenuItem
+        Start-Sleep -Milliseconds 200
+    }
+    $results.Add("All six Explorer views and name/date/type/size sorting were available.")
     $paneToggle = Find-Element `
         -Root $window `
         -AutomationId "ConnectionPaneToggle" `
@@ -798,6 +841,11 @@ try {
     $results.Add("The compact trusted-phone manager opened with an enable/disable checkbox.")
 
     Set-TestStage "creating folder"
+    $window = Get-DesktopWindow -ProcessId $process.Id -Name "Phone Transfer"
+    $newFolderButton = Find-Element `
+        -Root $window `
+        -Name "New folder" `
+        -ControlType ([System.Windows.Automation.ControlType]::Button)
     if (-not $newFolderButton.Current.IsEnabled -or $newFolderButton.Current.IsOffscreen) {
         throw "The New folder button was not available after root navigation completed."
     }
@@ -813,7 +861,19 @@ try {
         -Name "Rename" `
         -ControlType ([System.Windows.Automation.ControlType]::Button))
     Complete-Prompt -ProcessId $process.Id -Title "Rename" -Value $renamedFolder
-    $renamedItem = Get-DataItem -Window $window -ItemName $renamedFolder
+    $window = Get-DesktopWindow -ProcessId $process.Id -Name "Phone Transfer"
+    Invoke-Element -Element (Find-Element `
+        -Root $window `
+        -AutomationId "RefreshButton" `
+        -ControlType ([System.Windows.Automation.ControlType]::Button))
+    Wait-ForText `
+        -Root $window `
+        -AutomationId "OperationStatusText" `
+        -Predicate { param($value) $value -match "^\d+ item\(s\)( \| .+)?$" } | Out-Null
+    $renamedItem = Get-DataItem `
+        -Window $window `
+        -ItemName $renamedFolder `
+        -TimeoutSeconds 30
     $results.Add("Renamed the remote folder through the Windows prompt.")
 
     Set-TestStage "uploading file"

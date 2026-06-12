@@ -25,7 +25,8 @@
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   SelectionMode="Single"
-                  SelectionUnit="FullRow">
+                  SelectionUnit="FullRow"
+                  Style="{StaticResource CompactDataGrid}">
             <DataGrid.Columns>
                 <DataGridTemplateColumn Width="70" Header="Enabled">
                     <DataGridTemplateColumn.CellTemplate>

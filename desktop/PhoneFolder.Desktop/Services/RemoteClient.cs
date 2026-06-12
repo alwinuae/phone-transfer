@@ -72,7 +72,7 @@ public sealed class RemoteClient : IDisposable
                 "X-Phone-Transfer-Trusted-Token",
                 trustedToken);
         }
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.1");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.2");
         _httpClient.DefaultRequestHeaders.ExpectContinue = false;
     }
 
@@ -122,6 +122,13 @@ public sealed class RemoteClient : IDisposable
     {
         using var response = await _httpClient.GetAsync("roots", cancellationToken);
         return await ReadAsync<List<RemoteItem>>(response, cancellationToken);
+    }
+
+    public async Task<StorageInfo> GetStorageInfoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.GetAsync("storage", cancellationToken);
+        return await ReadAsync<StorageInfo>(response, cancellationToken);
     }
 
     public async Task<IReadOnlyList<RemoteItem>> GetChildrenAsync(string itemId, CancellationToken cancellationToken = default)
@@ -350,9 +357,22 @@ public sealed class RemoteClient : IDisposable
         string itemId,
         string destinationParentId,
         CancellationToken cancellationToken = default)
+        => await MoveAsync(
+            itemId,
+            destinationParentId,
+            "keepBoth",
+            cancellationToken);
+
+    public async Task<RemoteItem> MoveAsync(
+        string itemId,
+        string destinationParentId,
+        string conflict,
+        CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.PostAsync(
-            $"items/{Uri.EscapeDataString(itemId)}/move?parentId={Uri.EscapeDataString(destinationParentId)}",
+            $"items/{Uri.EscapeDataString(itemId)}/move"
+            + $"?parentId={Uri.EscapeDataString(destinationParentId)}"
+            + $"&conflict={Uri.EscapeDataString(conflict)}",
             null,
             cancellationToken);
         return await ReadAsync<RemoteItem>(response, cancellationToken);
@@ -362,9 +382,22 @@ public sealed class RemoteClient : IDisposable
         string itemId,
         string destinationParentId,
         CancellationToken cancellationToken = default)
+        => await CopyAsync(
+            itemId,
+            destinationParentId,
+            "keepBoth",
+            cancellationToken);
+
+    public async Task<RemoteItem> CopyAsync(
+        string itemId,
+        string destinationParentId,
+        string conflict,
+        CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.PostAsync(
-            $"items/{Uri.EscapeDataString(itemId)}/copy?parentId={Uri.EscapeDataString(destinationParentId)}",
+            $"items/{Uri.EscapeDataString(itemId)}/copy"
+            + $"?parentId={Uri.EscapeDataString(destinationParentId)}"
+            + $"&conflict={Uri.EscapeDataString(conflict)}",
             null,
             cancellationToken);
         return await ReadAsync<RemoteItem>(response, cancellationToken);
@@ -445,11 +478,17 @@ public sealed class RemoteClient : IDisposable
         try
         {
             var error = await response.Content.ReadFromJsonAsync<ApiError>(JsonOptions, cancellationToken);
-            throw new InvalidOperationException(error?.Message ?? $"Phone returned HTTP {(int)response.StatusCode}.");
+            throw new RemoteApiException(
+                response.StatusCode,
+                error?.Code ?? "HTTP_ERROR",
+                error?.Message ?? $"Phone returned HTTP {(int)response.StatusCode}.");
         }
         catch (JsonException)
         {
-            throw new InvalidOperationException($"Phone returned HTTP {(int)response.StatusCode}.");
+            throw new RemoteApiException(
+                response.StatusCode,
+                "HTTP_ERROR",
+                $"Phone returned HTTP {(int)response.StatusCode}.");
         }
     }
 

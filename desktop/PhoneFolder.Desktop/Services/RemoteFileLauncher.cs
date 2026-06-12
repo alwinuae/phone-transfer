@@ -37,7 +37,8 @@ public static class RemoteFileLauncher
 
         if (item.IsMedia)
         {
-            new MediaPreviewWindow(client, item, folderMedia) { Owner = owner }.Show();
+            WindowCoordinator.Instance.ShowIndependent(
+                new MediaPreviewWindow(client, item, folderMedia));
             return;
         }
 

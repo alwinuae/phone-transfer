@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 
@@ -53,8 +54,31 @@ public sealed class RemoteItem : INotifyPropertyChanged
         && MimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase);
     public bool IsMedia => IsImage || IsVideo || IsAudio;
     public bool SupportsThumbnail => !IsDirectory
-        && (MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-            || MimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase));
+        && (IsImage
+            || IsVideo
+            || MimeType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
+            || MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+            || MimeType.Contains("word", StringComparison.OrdinalIgnoreCase)
+            || MimeType.Contains("excel", StringComparison.OrdinalIgnoreCase)
+            || MimeType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase)
+            || MimeType.Contains("powerpoint", StringComparison.OrdinalIgnoreCase)
+            || MimeType.Contains("presentation", StringComparison.OrdinalIgnoreCase)
+            || ExtensionLabel is "PDF" or "DOC" or "DOCX" or "XLS" or "XLSX"
+                or "PPT" or "PPTX" or "TXT" or "CSV");
+    public string ExtensionLabel
+    {
+        get
+        {
+            if (IsDirectory)
+            {
+                return string.Empty;
+            }
+            var extension = Path.GetExtension(Name).TrimStart('.');
+            return string.IsNullOrWhiteSpace(extension)
+                ? "FILE"
+                : extension.ToUpperInvariant()[..Math.Min(5, extension.Length)];
+        }
+    }
     public string SizeLabel => IsDirectory ? string.Empty : FormatSize(Size);
     public string ModifiedLabel => ModifiedAt <= 0
         ? string.Empty

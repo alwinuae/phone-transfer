@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "0.7.1"
+    [string]$Version = "0.7.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,8 +46,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "Windows publish failed."
 }
 
-$windowsArtifact = Join-Path $releaseRoot "Phone-Transfer-Windows-v$Version.exe"
-Copy-Item -LiteralPath (Join-Path $publishRoot "PhoneTransfer.exe") -Destination $windowsArtifact -Force
+$stalePortableArtifact = Join-Path $releaseRoot "Phone-Transfer-Windows-v$Version.exe"
+if (Test-Path -LiteralPath $stalePortableArtifact) {
+    Remove-Item -LiteralPath $stalePortableArtifact -Force
+}
 
 $iscc = @(
     (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe")
@@ -136,7 +138,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $checksums = @(
-    Get-FileHash -LiteralPath $windowsArtifact -Algorithm SHA256
     Get-FileHash -LiteralPath $windowsInstaller -Algorithm SHA256
     Get-FileHash -LiteralPath $androidArtifact -Algorithm SHA256
 )
@@ -151,6 +152,5 @@ Copy-Item -LiteralPath (Join-Path $root "docs\RELEASE_NOTES.md") `
     -Force
 
 Write-Host "Release artifacts:"
-Write-Host "  $windowsArtifact"
 Write-Host "  $windowsInstaller"
 Write-Host "  $androidArtifact"

@@ -9,7 +9,7 @@
         MinHeight="480"
         Background="#101827"
         PreviewKeyDown="Window_PreviewKeyDown"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

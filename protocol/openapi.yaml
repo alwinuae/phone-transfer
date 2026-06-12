@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Phone Transfer Local API
-  version: 0.7.1
+  version: 0.7.2
   description: >
     HTTPS API exposed by the Android companion while sharing is active.
     Except for /info, file requests require either the current access code or
@@ -52,6 +52,23 @@ components:
       required: [trustedToken]
       properties:
         trustedToken: { type: string }
+    StorageStats:
+      type: object
+      required: [totalBytes, availableBytes, usedBytes, scopeName]
+      properties:
+        totalBytes:
+          type: [integer, "null"]
+          format: int64
+          description: Total bytes in the shared storage scope, or null when the SAF provider omits it.
+        availableBytes:
+          type: [integer, "null"]
+          format: int64
+          description: Bytes currently available, or null when the provider omits capacity metadata.
+        usedBytes:
+          type: [integer, "null"]
+          format: int64
+          description: Total minus available bytes when both values are known.
+        scopeName: { type: string }
 paths:
   /info:
     get:
@@ -97,6 +114,18 @@ paths:
                 items: { $ref: "#/components/schemas/RemoteItem" }
         "401":
           description: Invalid access code and trusted-device token
+  /storage:
+    get:
+      security: [{ accessCode: [] }, { trustedDevice: [] }]
+      summary: Get utilization for the currently shared storage scope
+      responses:
+        "200":
+          description: Storage capacity values. SAF providers may return null for unsupported fields.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StorageStats" }
+        "401":
+          description: Invalid access code and trusted-device token
   /items/{itemId}/children:
     get:
       security: [{ accessCode: [] }, { trustedDevice: [] }]
@@ -135,7 +164,7 @@ paths:
   /items/{itemId}/thumbnail:
     get:
       security: [{ accessCode: [] }, { trustedDevice: [] }]
-      summary: Get an image or video thumbnail
+      summary: Get an image, video, PDF, document, text, or archive thumbnail
       parameters:
         - in: path
           name: itemId
@@ -218,6 +247,10 @@ paths:
     post:
       security: [{ accessCode: [] }, { trustedDevice: [] }]
       summary: Move an item to another directory
+      description: >
+        Moving to the current parent is a no-op. A destination name collision
+        is resolved deterministically with Explorer-style keep-both naming,
+        such as "Report (2).pdf".
       parameters:
         - in: path
           name: itemId
@@ -237,6 +270,9 @@ paths:
     post:
       security: [{ accessCode: [] }, { trustedDevice: [] }]
       summary: Copy a file or folder to another directory
+      description: >
+        A destination name collision is resolved deterministically with
+        Explorer-style keep-both naming, such as "Photo (2).jpg".
       parameters:
         - in: path
           name: itemId

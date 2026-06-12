@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -20,21 +21,26 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<FolderNode> _folderRoots = [];
     private readonly Stack<NavigationEntry> _history = [];
     private readonly DiscoveryService _discoveryService = new();
+    private readonly ListCollectionView _itemsView;
     private RememberedConnection? _rememberedConnection;
     private RemoteClient? _client;
     private RemoteItem? _rootItem;
     private NavigationEntry? _current;
     private CancellationTokenSource? _thumbnailCancellation;
     private GridLength _folderPaneWidth = new(220);
+    private FileSortField _sortField = FileSortField.Name;
+    private bool _sortDescending;
+    private FileViewMode _viewMode = FileViewMode.Details;
     private int _busyDepth;
-    private TransferWindow? _transferWindow;
 
     public MainWindow()
     {
         InitializeComponent();
-        FilesGrid.ItemsSource = _items;
-        FilesList.ItemsSource = _items;
-        ThumbnailList.ItemsSource = _items;
+        _itemsView = (ListCollectionView)CollectionViewSource.GetDefaultView(_items);
+        ApplySort();
+        FilesGrid.ItemsSource = _itemsView;
+        FilesList.ItemsSource = _itemsView;
+        ThumbnailList.ItemsSource = _itemsView;
         DiscoveredDevicesCombo.ItemsSource = _discoveredDevices;
         TrustedDevicesCombo.ItemsSource = _trustedDevices;
         FolderTree.DataContext = _folderRoots;
@@ -47,6 +53,7 @@ public partial class MainWindow : Window
         }
         SetupExpander.IsExpanded = _rememberedConnection is null;
         TransferManager.Instance.Changed += TransferManager_Changed;
+        RemoteClipboard.Changed += RemoteClipboard_Changed;
         UpdateActionState();
     }
 
@@ -63,7 +70,7 @@ public partial class MainWindow : Window
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var alt = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
-        var isViewShortcut = control && key is Key.D1 or Key.D2 or Key.D3;
+        var isViewShortcut = control && key is Key.D1 or Key.D2 or Key.D3 or Key.D4 or Key.D5 or Key.D6;
         if (Keyboard.FocusedElement is TextBox && key != Key.Escape && !isViewShortcut)
         {
             return;
@@ -106,34 +113,49 @@ public partial class MainWindow : Window
             SelectAllVisibleItems();
             e.Handled = true;
         }
-        else if (control && key == Key.C)
+        else if (control && key == Key.C && SelectedItems().Count > 0)
         {
             CopySelectionButton_Click(sender, e);
             e.Handled = true;
         }
-        else if (control && key == Key.X)
+        else if (control && key == Key.X && SelectedItems().Count > 0)
         {
             CutSelectionButton_Click(sender, e);
             e.Handled = true;
         }
-        else if (control && key == Key.V)
+        else if (control && key == Key.V && RemoteClipboard.HasItems)
         {
             PasteButton_Click(sender, e);
             e.Handled = true;
         }
         else if (control && key == Key.D1)
         {
-            await SetViewModeAsync("Details");
+            await SetViewModeAsync(FileViewMode.Details);
             e.Handled = true;
         }
         else if (control && key == Key.D2)
         {
-            await SetViewModeAsync("List");
+            await SetViewModeAsync(FileViewMode.List);
             e.Handled = true;
         }
         else if (control && key == Key.D3)
         {
-            await SetViewModeAsync("Thumbnails");
+            await SetViewModeAsync(FileViewMode.Tiles);
+            e.Handled = true;
+        }
+        else if (control && key == Key.D4)
+        {
+            await SetViewModeAsync(FileViewMode.SmallIcons);
+            e.Handled = true;
+        }
+        else if (control && key == Key.D5)
+        {
+            await SetViewModeAsync(FileViewMode.MediumIcons);
+            e.Handled = true;
+        }
+        else if (control && key == Key.D6)
+        {
+            await SetViewModeAsync(FileViewMode.LargeIcons);
             e.Handled = true;
         }
         else if (key == Key.Enter && SelectedItem() is { } selected)
@@ -158,16 +180,7 @@ public partial class MainWindow : Window
 
     private void ShowTransfersWindow()
     {
-        if (_transferWindow is null)
-        {
-            _transferWindow = new TransferWindow { Owner = this };
-            _transferWindow.Closed += (_, _) => _transferWindow = null;
-            _transferWindow.Show();
-        }
-        else
-        {
-            _transferWindow.Activate();
-        }
+        WindowCoordinator.Instance.ShowSingleton(() => new TransferWindow());
     }
 
     private void TransferManager_Changed(object? sender, EventArgs e)
@@ -178,6 +191,9 @@ public partial class MainWindow : Window
             TransfersButton.Content = active > 0 ? $"Transfers ({active})" : "Transfers";
         });
     }
+
+    private void RemoteClipboard_Changed(object? sender, EventArgs e) =>
+        Dispatcher.Invoke(UpdateActionState);
 
     private void RefreshTrustedDevices(RememberedConnection? selected)
     {
@@ -452,6 +468,7 @@ public partial class MainWindow : Window
                 _items.Clear();
                 PathText.Text = "No shared folder is available";
                 OperationStatusText.Text = "Choose a folder in the Android app.";
+                await RefreshStorageInfoAsync();
                 UpdateActionState();
                 return;
             }
@@ -605,6 +622,8 @@ public partial class MainWindow : Window
         _folderRoots.Clear();
         ConnectionStatusText.Text = "Not connected";
         DeviceDetailsText.Text = string.Empty;
+        StorageStatusText.Visibility = Visibility.Collapsed;
+        StorageUsageBar.Visibility = Visibility.Collapsed;
         PathText.Text = "Connect to a phone to browse files";
         OperationStatusText.Text = "Ready";
         UpdateActionState();
@@ -757,7 +776,8 @@ public partial class MainWindow : Window
         {
             path = path.Append((selectedFolder.Id, selectedFolder.Name));
         }
-        new FolderWindow(_client, path.ToArray()) { Owner = this }.Show();
+        WindowCoordinator.Instance.ShowIndependent(
+            new FolderWindow(_client, path.ToArray()));
     }
 
     private void CopySelectionButton_Click(object sender, RoutedEventArgs e) =>
@@ -916,7 +936,11 @@ public partial class MainWindow : Window
                             cancellationToken);
                 }
                 },
-                completed: () => _ = RefreshFolderIfCurrentAsync(destinationId),
+                completed: () =>
+                {
+                    _ = RefreshFolderIfCurrentAsync(destinationId);
+                    _ = RefreshStorageInfoAsync();
+                },
                 location: destinationName);
         }
 
@@ -1192,8 +1216,7 @@ public partial class MainWindow : Window
             _current = destination;
             _items.Clear();
             foreach (var item in children
-                         .OrderByDescending(item => item.IsDirectory)
-                         .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
+                         .OrderByDescending(item => item.IsDirectory))
             {
                 item.PropertyChanged += (_, args) =>
                 {
@@ -1204,6 +1227,7 @@ public partial class MainWindow : Window
                 };
                 _items.Add(item);
             }
+            _itemsView.Refresh();
 
             var folderNode = FindFolderNode(destination.Id);
             if (folderNode is not null)
@@ -1218,7 +1242,54 @@ public partial class MainWindow : Window
                 : $"{children.Count} item(s)";
             UpdateActionState();
             await LoadThumbnailsIfNeededAsync();
+            await RefreshStorageInfoAsync();
         });
+    }
+
+    private async Task RefreshStorageInfoAsync()
+    {
+        var client = _client;
+        if (client is null)
+        {
+            StorageStatusText.Visibility = Visibility.Collapsed;
+            StorageUsageBar.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        try
+        {
+            var storage = await client.GetStorageInfoAsync();
+            var total = storage.TotalBytes;
+            var available = storage.AvailableBytes;
+            var used = storage.UsedBytes
+                ?? (total.HasValue && available.HasValue
+                    ? Math.Max(0, total.Value - available.Value)
+                    : null);
+
+            if (total is > 0 && used.HasValue)
+            {
+                var percent = Math.Clamp(used.Value * 100d / total.Value, 0, 100);
+                StorageStatusText.Text =
+                    $"{storage.ScopeName}: {FormatSize(used.Value)} used of {FormatSize(total.Value)}"
+                    + (available.HasValue ? $" | {FormatSize(available.Value)} free" : string.Empty);
+                StorageUsageBar.Value = percent;
+                StorageUsageBar.Tag = $"{percent:0}%";
+                StorageUsageBar.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                StorageStatusText.Text = available.HasValue
+                    ? $"{storage.ScopeName}: {FormatSize(available.Value)} available"
+                    : $"{storage.ScopeName}: capacity unavailable";
+                StorageUsageBar.Visibility = Visibility.Collapsed;
+            }
+            StorageStatusText.Visibility = Visibility.Visible;
+        }
+        catch
+        {
+            StorageStatusText.Visibility = Visibility.Collapsed;
+            StorageUsageBar.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void SynchronizeFolderNode(FolderNode node, IReadOnlyList<RemoteItem> children)
@@ -1286,23 +1357,114 @@ public partial class MainWindow : Window
     }
 
     private async void ViewDetails_Click(object sender, RoutedEventArgs e) =>
-        await SetViewModeAsync("Details");
+        await SetViewModeAsync(FileViewMode.Details);
 
     private async void ViewList_Click(object sender, RoutedEventArgs e) =>
-        await SetViewModeAsync("List");
+        await SetViewModeAsync(FileViewMode.List);
 
-    private async void ViewThumbnails_Click(object sender, RoutedEventArgs e) =>
-        await SetViewModeAsync("Thumbnails");
+    private async void ViewTiles_Click(object sender, RoutedEventArgs e) =>
+        await SetViewModeAsync(FileViewMode.Tiles);
 
-    private async Task SetViewModeAsync(string mode)
+    private async void ViewSmallIcons_Click(object sender, RoutedEventArgs e) =>
+        await SetViewModeAsync(FileViewMode.SmallIcons);
+
+    private async void ViewMediumIcons_Click(object sender, RoutedEventArgs e) =>
+        await SetViewModeAsync(FileViewMode.MediumIcons);
+
+    private async void ViewLargeIcons_Click(object sender, RoutedEventArgs e) =>
+        await SetViewModeAsync(FileViewMode.LargeIcons);
+
+    private async Task SetViewModeAsync(FileViewMode mode)
     {
-        FilesGrid.Visibility = mode == "Details" ? Visibility.Visible : Visibility.Collapsed;
-        FilesList.Visibility = mode == "List" ? Visibility.Visible : Visibility.Collapsed;
-        ThumbnailList.Visibility = mode == "Thumbnails" ? Visibility.Visible : Visibility.Collapsed;
-        ViewModeButton.Content = $"View: {mode}";
+        _viewMode = mode;
+        FilesGrid.Visibility = mode == FileViewMode.Details ? Visibility.Visible : Visibility.Collapsed;
+        FilesList.Visibility = mode == FileViewMode.List ? Visibility.Visible : Visibility.Collapsed;
+        ThumbnailList.Visibility =
+            mode is not FileViewMode.Details and not FileViewMode.List
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        ThumbnailList.ItemTemplate = (DataTemplate)FindResource(mode switch
+        {
+            FileViewMode.Tiles => "FileTileTemplate",
+            FileViewMode.SmallIcons => "FileSmallIconTemplate",
+            FileViewMode.MediumIcons => "FileMediumIconTemplate",
+            _ => "FileLargeIconTemplate"
+        });
+        ViewModeButton.Content = $"View: {ViewModeLabel(mode)}";
         await LoadThumbnailsIfNeededAsync();
         UpdateActionState();
     }
+
+    private void SortModeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SortModeButton.ContextMenu is null)
+        {
+            return;
+        }
+        SortModeButton.ContextMenu.PlacementTarget = SortModeButton;
+        SortModeButton.ContextMenu.Placement = PlacementMode.Bottom;
+        SortModeButton.ContextMenu.IsOpen = true;
+    }
+
+    private void SortName_Click(object sender, RoutedEventArgs e) =>
+        SetSort(FileSortField.Name);
+
+    private void SortModified_Click(object sender, RoutedEventArgs e) =>
+        SetSort(FileSortField.Modified);
+
+    private void SortType_Click(object sender, RoutedEventArgs e) =>
+        SetSort(FileSortField.Type);
+
+    private void SortSize_Click(object sender, RoutedEventArgs e) =>
+        SetSort(FileSortField.Size);
+
+    private void SortAscending_Click(object sender, RoutedEventArgs e)
+    {
+        _sortDescending = false;
+        ApplySort();
+    }
+
+    private void SortDescending_Click(object sender, RoutedEventArgs e)
+    {
+        _sortDescending = true;
+        ApplySort();
+    }
+
+    private void SetSort(FileSortField field)
+    {
+        _sortField = field;
+        ApplySort();
+    }
+
+    private void ApplySort()
+    {
+        _itemsView.CustomSort = new RemoteItemComparer(_sortField, _sortDescending);
+        SortModeButton.Content =
+            $"Sort: {SortFieldLabel(_sortField)} {(_sortDescending ? "\u2193" : "\u2191")}";
+        _itemsView.Refresh();
+    }
+
+    private async void OpenContext_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedItem() is { } selected)
+        {
+            await OpenItemAsync(selected);
+        }
+    }
+
+    private static string ViewModeLabel(FileViewMode mode) => mode switch
+    {
+        FileViewMode.SmallIcons => "Small icons",
+        FileViewMode.MediumIcons => "Medium icons",
+        FileViewMode.LargeIcons => "Large icons",
+        _ => mode.ToString()
+    };
+
+    private static string SortFieldLabel(FileSortField field) => field switch
+    {
+        FileSortField.Modified => "Date modified",
+        _ => field.ToString()
+    };
 
     private async Task LoadThumbnailsIfNeededAsync()
     {
@@ -1496,6 +1658,9 @@ public partial class MainWindow : Window
         var busy = _busyDepth > 0;
         var connected = _client is not null;
         var browsing = connected && _current is not null;
+        var selectedCount = browsing ? SelectedItems().Count : 0;
+        var hasSelection = selectedCount > 0;
+        var hasSingleSelection = selectedCount == 1;
 
         DiscoverButton.IsEnabled = !busy;
         HotspotButton.IsEnabled = !busy;
@@ -1525,13 +1690,19 @@ public partial class MainWindow : Window
         ThumbnailList.IsEnabled = browsing && !busy;
         FolderTree.IsEnabled = connected && !busy;
         ViewModeButton.IsEnabled = browsing && !busy;
+        SortModeButton.IsEnabled = browsing && !busy;
         OpenMediaButton.IsEnabled = browsing
             && !busy
             && SelectedItem() is { IsDirectory: false };
         OpenFolderWindowButton.IsEnabled = browsing && !busy;
-        CopySelectionButton.IsEnabled = browsing && !busy && SelectedItems().Count > 0;
-        CutSelectionButton.IsEnabled = browsing && !busy && SelectedItems().Count > 0;
+        DownloadButton.IsEnabled = browsing && !busy && hasSelection;
+        CopySelectionButton.IsEnabled = browsing && !busy && hasSelection;
+        CutSelectionButton.IsEnabled = browsing && !busy && hasSelection;
         PasteButton.IsEnabled = browsing && !busy && RemoteClipboard.HasItems;
+        CopyToButton.IsEnabled = browsing && !busy && hasSelection;
+        MoveToButton.IsEnabled = browsing && !busy && hasSelection;
+        RenameButton.IsEnabled = browsing && !busy && hasSingleSelection;
+        DeleteButton.IsEnabled = browsing && !busy && hasSelection;
         SettingsButton.IsEnabled = !busy;
         FilesHost.AllowDrop = browsing;
     }
@@ -1606,6 +1777,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         TransferManager.Instance.Changed -= TransferManager_Changed;
+        RemoteClipboard.Changed -= RemoteClipboard_Changed;
         _thumbnailCancellation?.Cancel();
         _client?.Dispose();
         base.OnClosed(e);

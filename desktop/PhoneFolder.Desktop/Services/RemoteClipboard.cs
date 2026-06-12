@@ -11,6 +11,7 @@ public static class RemoteClipboard
     public static IReadOnlyList<RemoteItem> Items => _items;
     public static bool IsCut { get; private set; }
     public static bool HasItems => _items.Count > 0;
+    public static event EventHandler? Changed;
 
     public static void Set(RemoteClient client, IReadOnlyList<RemoteItem> items, bool cut) =>
         Set(client.ConnectionKey, client.DeviceName, items, cut);
@@ -25,6 +26,7 @@ public static class RemoteClipboard
         _connectionKey = connectionKey;
         _deviceName = deviceName;
         IsCut = cut;
+        Changed?.Invoke(null, EventArgs.Empty);
     }
 
     public static void Clear()
@@ -33,6 +35,7 @@ public static class RemoteClipboard
         _connectionKey = string.Empty;
         _deviceName = string.Empty;
         IsCut = false;
+        Changed?.Invoke(null, EventArgs.Empty);
     }
 
     public static async Task PasteAsync(

@@ -197,7 +197,7 @@ final class PhoneFolderServer implements Closeable {
         if ("/api/v1/info".equals(path) && "GET".equals(request.method)) {
             String json = "{"
                     + "\"name\":\"" + JsonUtil.escape(deviceName) + "\","
-                    + "\"version\":\"0.7.1\","
+                    + "\"version\":\"0.7.2\","
                     + "\"protocolVersion\":1,"
                     + "\"port\":" + HTTP_PORT + ","
                     + "\"transport\":\"https\","
@@ -248,6 +248,23 @@ final class PhoneFolderServer implements Closeable {
 
         if ("/api/v1/roots".equals(path) && "GET".equals(request.method)) {
             writeJson(output, 200, "OK", JsonUtil.items(Collections.singletonList(storage.root())), keepAlive);
+            return;
+        }
+
+        if ("/api/v1/storage".equals(path) && "GET".equals(request.method)) {
+            try {
+                writeJson(output, 200, "OK", JsonUtil.storage(storage.storageStats()), keepAlive);
+            } catch (SecurityException exception) {
+                writeJson(output, 403, "Forbidden",
+                        JsonUtil.error(
+                                "STORAGE_PERMISSION_REVOKED",
+                                "Android no longer allows access to shared storage."),
+                        keepAlive);
+            } catch (Exception exception) {
+                Log.e(TAG, "Storage utilization lookup failed", exception);
+                writeJson(output, 500, "Internal Server Error",
+                        JsonUtil.error("STORAGE_ERROR", message(exception)), keepAlive);
+            }
             return;
         }
 

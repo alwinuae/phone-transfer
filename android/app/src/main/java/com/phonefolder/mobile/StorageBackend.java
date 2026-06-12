@@ -16,6 +16,7 @@ interface StorageBackend {
     Item copy(String itemId, String destinationParentId) throws Exception;
     byte[] thumbnail(String itemId, int requestedSize) throws Exception;
     int rotation(String itemId) throws Exception;
+    StorageStats storageStats() throws Exception;
     void delete(String itemId) throws Exception;
 
     final class Item {
@@ -42,6 +43,20 @@ interface StorageBackend {
             this.modifiedAt = modifiedAt;
             this.mimeType = mimeType;
             this.canWrite = canWrite;
+        }
+    }
+
+    final class StorageStats {
+        final Long totalBytes;
+        final Long availableBytes;
+        final Long usedBytes;
+        final String scopeName;
+
+        StorageStats(Long totalBytes, Long availableBytes, Long usedBytes, String scopeName) {
+            this.totalBytes = totalBytes;
+            this.availableBytes = availableBytes;
+            this.usedBytes = usedBytes;
+            this.scopeName = scopeName;
         }
     }
 }

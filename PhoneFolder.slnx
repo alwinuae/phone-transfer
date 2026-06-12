@@ -6,5 +6,6 @@
     <Project Path="tests/PhoneFolder.IntegrationTests/PhoneFolder.IntegrationTests.csproj" />
     <Project Path="tests/PhoneFolder.NetworkTests/PhoneFolder.NetworkTests.csproj" />
     <Project Path="tests/PhoneFolder.PerformanceTests/PhoneFolder.PerformanceTests.csproj" />
+    <Project Path="tests/PhoneFolder.UiLayoutTests/PhoneFolder.UiLayoutTests.csproj" />
   </Folder>
 </Solution>
