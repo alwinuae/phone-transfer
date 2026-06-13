@@ -3,10 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Phone Transfer - Folder"
         Icon="Assets/PhoneTransfer.ico"
+        Style="{StaticResource {x:Type Window}}"
         Width="980"
         Height="640"
         MinWidth="720"
         MinHeight="440"
+        Background="{StaticResource WindowBrush}"
         PreviewKeyDown="Window_PreviewKeyDown"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="14">
@@ -27,7 +29,10 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <WrapPanel x:Name="FolderNavigationPanel">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="FolderNavigationPanel"
+                            Orientation="Horizontal">
                     <Button x:Name="BackButton"
                             Click="BackButton_Click"
                             Content="&lt; Back"
@@ -39,7 +44,8 @@
                     <Button Click="RefreshButton_Click"
                             Content="Refresh"
                             Style="{StaticResource NavigationButton}"/>
-                </WrapPanel>
+                </StackPanel>
+                </ScrollViewer>
                 <TextBlock x:Name="PathText"
                            Grid.Row="1"
                            Margin="2,2,8,6"
@@ -57,11 +63,14 @@
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
-            <WrapPanel x:Name="FolderActionsPanel">
-                <WrapPanel.Resources>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+            <StackPanel x:Name="FolderActionsPanel"
+                        Orientation="Horizontal">
+                <StackPanel.Resources>
                     <Style TargetType="Button"
-                           BasedOn="{StaticResource ToolbarButton}"/>
-                </WrapPanel.Resources>
+                           BasedOn="{StaticResource CompactToolbarButton}"/>
+                </StackPanel.Resources>
                 <Button Click="UploadButton_Click" Content="Upload files"/>
                 <Button x:Name="DownloadButton"
                         Click="DownloadButton_Click"
@@ -120,7 +129,8 @@
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
-            </WrapPanel>
+            </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <Grid Grid.Row="2"

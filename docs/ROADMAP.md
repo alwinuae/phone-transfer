@@ -1,5 +1,15 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.3
+
+- Edge-to-edge dark Windows chrome and dark scrollbar, checkbox, expander,
+  menu, tooltip, table, and dialog surfaces.
+- Single-row navigation and file command bars with stable button dimensions
+  and horizontal overflow at compact window widths.
+- Notepad++-style File/Edit/View/Transfer/Phone/Settings/Help menu.
+- Multiple phone-folder tabs with independent path and back history.
+- Separate folder windows remain available from the File menu.
+
 ## Shipped In 0.7.2
 
 - Notepad++-inspired dark desktop theme and supported dark Windows title bars.

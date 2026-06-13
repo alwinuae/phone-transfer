@@ -31,6 +31,37 @@ cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
 
+## 0.7.3 Verification Summary
+
+- The full .NET solution builds with zero warnings and zero errors.
+- Android release lint and compilation complete with zero errors and 15
+  existing localization warnings.
+- WPF layout regression passes main-window widths of 1040, 1180, 1380, and
+  1600 pixels and folder-window widths of 720, 800, 980, and 1200 pixels.
+- Navigation and file command buttons retain stable dimensions and remain on
+  one horizontal row at every tested width. Compact widths use horizontal
+  overflow instead of wrapping, shrinking, or overlapping.
+- Main and folder windows use dark application backgrounds. The main window
+  and dialogs use custom dark title chrome; scrollbars, checkboxes, expanders,
+  menus, tooltips, data grids, lists, and disabled controls use dark templates.
+- The main window exposes File/Edit/View/Transfer/Phone/Settings/Help menus
+  and a dark folder-tab strip. Folder tabs retain their own location and back
+  history; separate folder windows remain available.
+- Existing selection-state, compact-row, progress-bar, and multi-window
+  lifecycle regressions pass.
+- Off-screen renders were checked at 1040x680, 1380x860, 720x440, and 980x640.
+- Release packaging produced the installable Setup EXE and signed APK with
+  matching SHA-256 entries and no portable Windows package.
+- Silent Windows installation exited with code `0`. Installed Apps registers
+  Phone Transfer `0.7.3`, publisher `Alwin Thomas`, the installed icon, normal
+  uninstall, and quiet uninstall commands.
+- The packaged Android app reports version code `13`, version `0.7.3`, target
+  SDK `36`, and verifies with the existing RSA release certificate.
+- The interactive Windows capture helper was unavailable because its bundled
+  runtime rejected an internal package export. The connected phone was not
+  reachable during this UI-only verification, so the previously passing
+  0.7.2 transfer/integration evidence was not rerun.
+
 ## 0.7.2 Verification Summary
 
 - The full .NET solution builds with zero warnings and zero errors.

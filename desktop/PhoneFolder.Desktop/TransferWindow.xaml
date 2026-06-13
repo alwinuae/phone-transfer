@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Phone Transfer - Transfers"
         Icon="Assets/PhoneTransfer.ico"
+        Style="{StaticResource {x:Type Window}}"
         Width="1080"
         Height="430"
         MinWidth="820"

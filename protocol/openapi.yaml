@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Phone Transfer Local API
-  version: 0.7.2
+  version: 0.7.3
   description: >
     HTTPS API exposed by the Android companion while sharing is active.
     Except for /info, file requests require either the current access code or

@@ -4,7 +4,11 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.7.2
+## Version 0.7.3
+
+Version 0.7.3 adds a complete edge-to-edge charcoal Windows theme, custom dark
+window chrome, single-row command bars, a Notepad++-style application menu, and
+multiple phone-folder tabs with independent path and back-history state.
 
 - Sleek Notepad++-inspired dark desktop theme with dark Windows title bars.
 - Responsive fixed-height toolbars wrap cleanly without shrinking or overlap.
@@ -88,8 +92,8 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-Setup-v0.7.2.exe
-artifacts/release/Phone-Transfer-Android-v0.7.2.apk
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.3.exe
+artifacts/release/Phone-Transfer-Android-v0.7.3.apk
 artifacts/release/SHA256SUMS.txt
 ```
 

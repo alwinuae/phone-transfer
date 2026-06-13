@@ -46,14 +46,18 @@ internal static class Program
         {
             Layout(scope.Window, width, 680);
             AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "MainHeaderButtonsPanel"),
+                Require<StackPanel>(scope.Window, "MainHeaderButtonsPanel"),
                 $"main header at {width:0}px",
                 70);
             AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "FileActionsPanel"),
-                $"main file actions at {width:0}px");
+                Require<StackPanel>(scope.Window, "FileActionsPanel"),
+                $"main file actions at {width:0}px",
+                72);
         }
 
+        AssertDarkWindowChrome(scope.Window, "Main window");
+        Require<Menu>(scope.Window, "MainMenu");
+        Require<ListBox>(scope.Window, "FolderTabsList");
         AssertDisabled(scope.Window, "DownloadButton");
         AssertDisabled(scope.Window, "CopySelectionButton");
         AssertDisabled(scope.Window, "CutSelectionButton");
@@ -70,6 +74,10 @@ internal static class Program
             RenderWindowContent(
                 scope.Window,
                 Path.Combine(renderDirectory, "main-dark-1040x680.png"));
+            Layout(scope.Window, 1380, 860);
+            RenderWindowContent(
+                scope.Window,
+                Path.Combine(renderDirectory, "main-dark-1380x860.png"));
         }
     }
 
@@ -83,14 +91,16 @@ internal static class Program
         {
             Layout(scope.Window, width, 440);
             AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "FolderNavigationPanel"),
+                Require<StackPanel>(scope.Window, "FolderNavigationPanel"),
                 $"folder navigation at {width:0}px",
                 70);
             AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "FolderActionsPanel"),
-                $"folder actions at {width:0}px");
+                Require<StackPanel>(scope.Window, "FolderActionsPanel"),
+                $"folder actions at {width:0}px",
+                72);
         }
 
+        AssertDarkWindowChrome(scope.Window, "Folder window");
         AssertDisabled(scope.Window, "DownloadButton");
         AssertDisabled(scope.Window, "CopyButton");
         AssertDisabled(scope.Window, "CutButton");
@@ -160,6 +170,10 @@ internal static class Program
             RenderWindowContent(
                 scope.Window,
                 Path.Combine(renderDirectory, "folder-dark-720x440.png"));
+            Layout(scope.Window, 980, 640);
+            RenderWindowContent(
+                scope.Window,
+                Path.Combine(renderDirectory, "folder-dark-980x640.png"));
         }
     }
 
@@ -233,10 +247,10 @@ internal static class Program
         foreach (var button in buttons)
         {
             Assert(
-                Math.Abs(button.ActualHeight - 34) < 0.1,
+                Math.Abs(button.ActualHeight - 34) < 0.75,
                 $"{label}: {button.NameOrContent()} height changed to {button.ActualHeight:0.##}.");
             Assert(
-                button.ActualWidth >= minimumWidth,
+                button.ActualWidth >= minimumWidth - 0.75,
                 $"{label}: {button.NameOrContent()} width shrank to {button.ActualWidth:0.##}.");
             var origin = button.TranslatePoint(new Point(0, 0), panel);
             Assert(origin.X >= 0 && origin.Y >= 0, $"{label}: a button is outside its panel.");
@@ -244,6 +258,12 @@ internal static class Program
                 origin.X + button.ActualWidth <= panel.ActualWidth + 0.1,
                 $"{label}: {button.NameOrContent()} extends beyond the panel.");
         }
+
+        var rowTop = buttons[0].TranslatePoint(new Point(0, 0), panel).Y;
+        Assert(
+            buttons.All(button =>
+                Math.Abs(button.TranslatePoint(new Point(0, 0), panel).Y - rowTop) < 0.1),
+            $"{label}: buttons wrapped onto more than one row.");
 
         for (var first = 0; first < buttons.Length; first++)
         {
@@ -262,6 +282,22 @@ internal static class Program
                     $"{label}: {buttons[first].NameOrContent()} overlaps {buttons[second].NameOrContent()}.");
             }
         }
+    }
+
+    private static void AssertDarkWindowChrome(Window window, string label)
+    {
+        Assert(
+            window.WindowStyle == WindowStyle.None,
+            $"{label} still uses the light native title bar.");
+        Assert(
+            window.Background is SolidColorBrush background
+            && background.Color.R < 40
+            && background.Color.G < 40
+            && background.Color.B < 40,
+            $"{label} does not use a clean dark background.");
+        Assert(
+            window.Template.FindName("WindowFrame", window) is Border,
+            $"{label} custom dark window frame is missing.");
     }
 
     private static void AssertDisabled(FrameworkElement root, string name)

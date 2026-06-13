@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<DiscoveredDevice> _discoveredDevices = [];
     private readonly ObservableCollection<RememberedConnection> _trustedDevices = [];
     private readonly ObservableCollection<FolderNode> _folderRoots = [];
+    private readonly ObservableCollection<BrowserTab> _browserTabs = [];
     private readonly Stack<NavigationEntry> _history = [];
     private readonly DiscoveryService _discoveryService = new();
     private readonly ListCollectionView _itemsView;
@@ -31,6 +32,8 @@ public partial class MainWindow : Window
     private FileSortField _sortField = FileSortField.Name;
     private bool _sortDescending;
     private FileViewMode _viewMode = FileViewMode.Details;
+    private BrowserTab? _activeBrowserTab;
+    private bool _suppressTabSelection;
     private int _busyDepth;
 
     public MainWindow()
@@ -41,6 +44,7 @@ public partial class MainWindow : Window
         FilesGrid.ItemsSource = _itemsView;
         FilesList.ItemsSource = _itemsView;
         ThumbnailList.ItemsSource = _itemsView;
+        FolderTabsList.ItemsSource = _browserTabs;
         DiscoveredDevicesCombo.ItemsSource = _discoveredDevices;
         TrustedDevicesCombo.ItemsSource = _trustedDevices;
         FolderTree.DataContext = _folderRoots;
@@ -71,7 +75,11 @@ public partial class MainWindow : Window
         var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var alt = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
         var isViewShortcut = control && key is Key.D1 or Key.D2 or Key.D3 or Key.D4 or Key.D5 or Key.D6;
-        if (Keyboard.FocusedElement is TextBox && key != Key.Escape && !isViewShortcut)
+        var isTabShortcut = control && key is Key.T or Key.W;
+        if (Keyboard.FocusedElement is TextBox
+            && key != Key.Escape
+            && !isViewShortcut
+            && !isTabShortcut)
         {
             return;
         }
@@ -126,6 +134,16 @@ public partial class MainWindow : Window
         else if (control && key == Key.V && RemoteClipboard.HasItems)
         {
             PasteButton_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (control && key == Key.T)
+        {
+            await OpenFolderInNewTabAsync();
+            e.Handled = true;
+        }
+        else if (control && key == Key.W)
+        {
+            await CloseBrowserTabAsync(_activeBrowserTab);
             e.Handled = true;
         }
         else if (control && key == Key.D1)
@@ -461,6 +479,7 @@ public partial class MainWindow : Window
                 + $"Certificate SHA-256:\n{info.CertificateFingerprint}";
             _history.Clear();
             _folderRoots.Clear();
+            ResetBrowserTabs();
 
             if (roots.Count == 0)
             {
@@ -475,12 +494,12 @@ public partial class MainWindow : Window
 
             _rootItem = roots[0];
             _folderRoots.Add(FolderNode.Create(_rootItem.Id, _rootItem.Name));
-            await NavigateAsync(
-                new NavigationEntry(
-                    _rootItem.Id,
-                    _rootItem.Name,
-                    [new PathSegment(_rootItem.Id, _rootItem.Name)]),
-                addToHistory: false);
+            var rootDestination = new NavigationEntry(
+                _rootItem.Id,
+                _rootItem.Name,
+                [new PathSegment(_rootItem.Id, _rootItem.Name)]);
+            CreateBrowserTab(rootDestination);
+            await NavigateAsync(rootDestination, addToHistory: false);
 
             if (RememberDeviceCheckBox.IsChecked == true)
             {
@@ -620,6 +639,7 @@ public partial class MainWindow : Window
         _history.Clear();
         _items.Clear();
         _folderRoots.Clear();
+        ResetBrowserTabs();
         ConnectionStatusText.Text = "Not connected";
         DeviceDetailsText.Text = string.Empty;
         StorageStatusText.Visibility = Visibility.Collapsed;
@@ -763,7 +783,61 @@ public partial class MainWindow : Window
         DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Copy | DragDropEffects.Move);
     }
 
-    private void OpenFolderWindowButton_Click(object sender, RoutedEventArgs e)
+    private async void OpenFolderWindowButton_Click(object sender, RoutedEventArgs e) =>
+        await OpenFolderInNewTabAsync();
+
+    private async void OpenFolderTabMenu_Click(object sender, RoutedEventArgs e) =>
+        await OpenFolderInNewTabAsync();
+
+    private void OpenFolderWindowMenu_Click(object sender, RoutedEventArgs e) =>
+        OpenFolderInIndependentWindow();
+
+    private async void CloseFolderTabMenu_Click(object sender, RoutedEventArgs e) =>
+        await CloseBrowserTabAsync(_activeBrowserTab);
+
+    private async void CloseFolderTabButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is Button { Tag: BrowserTab tab })
+        {
+            await CloseBrowserTabAsync(tab);
+        }
+    }
+
+    private void ExitMenu_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void SelectAllMenu_Click(object sender, RoutedEventArgs e) =>
+        SelectAllVisibleItems();
+
+    private void AboutMenu_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            this,
+            "Phone Transfer 0.7.3\nFast local browsing and file transfer between Windows and Android.",
+            "About Phone Transfer",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private async Task OpenFolderInNewTabAsync()
+    {
+        if (_client is null || _current is null)
+        {
+            return;
+        }
+
+        var destination = SelectedFolderDestination();
+        if (destination is null)
+        {
+            return;
+        }
+
+        var tab = new BrowserTab(destination);
+        _browserTabs.Add(tab);
+        await ActivateBrowserTabAsync(tab);
+    }
+
+    private void OpenFolderInIndependentWindow()
     {
         if (_client is null || _current is null)
         {
@@ -778,6 +852,23 @@ public partial class MainWindow : Window
         }
         WindowCoordinator.Instance.ShowIndependent(
             new FolderWindow(_client, path.ToArray()));
+    }
+
+    private NavigationEntry? SelectedFolderDestination()
+    {
+        if (_current is null)
+        {
+            return null;
+        }
+
+        var selectedFolder = SelectedItems().FirstOrDefault(item => item.IsDirectory);
+        return selectedFolder is null
+            ? _current
+            : new NavigationEntry(
+                selectedFolder.Id,
+                selectedFolder.Name,
+                _current.Path.Append(
+                    new PathSegment(selectedFolder.Id, selectedFolder.Name)).ToArray());
     }
 
     private void CopySelectionButton_Click(object sender, RoutedEventArgs e) =>
@@ -1236,6 +1327,7 @@ public partial class MainWindow : Window
             }
 
             PathText.Text = string.Join(" > ", destination.Path.Select(segment => segment.Name));
+            SynchronizeActiveBrowserTab();
             var totalSize = children.Where(item => !item.IsDirectory).Sum(item => Math.Max(0, item.Size));
             OperationStatusText.Text = totalSize > 0
                 ? $"{children.Count} item(s) | {FormatSize(totalSize)}"
@@ -1244,6 +1336,122 @@ public partial class MainWindow : Window
             await LoadThumbnailsIfNeededAsync();
             await RefreshStorageInfoAsync();
         });
+    }
+
+    private void CreateBrowserTab(NavigationEntry destination)
+    {
+        var tab = new BrowserTab(destination);
+        _browserTabs.Add(tab);
+        SetSelectedBrowserTab(tab);
+    }
+
+    private async void FolderTabsList_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_suppressTabSelection
+            || FolderTabsList.SelectedItem is not BrowserTab tab
+            || ReferenceEquals(tab, _activeBrowserTab))
+        {
+            return;
+        }
+
+        await ActivateBrowserTabAsync(tab);
+    }
+
+    private async Task ActivateBrowserTabAsync(BrowserTab tab)
+    {
+        if (_client is null)
+        {
+            return;
+        }
+
+        _thumbnailCancellation?.Cancel();
+        _activeBrowserTab = tab;
+        _history.Clear();
+        foreach (var entry in tab.History)
+        {
+            _history.Push(entry);
+        }
+        _current = tab.Current;
+        SetSelectedBrowserTab(tab);
+        await NavigateAsync(tab.Current, addToHistory: false);
+    }
+
+    private async Task CloseBrowserTabAsync(BrowserTab? tab)
+    {
+        if (tab is null || !_browserTabs.Contains(tab))
+        {
+            return;
+        }
+
+        if (_browserTabs.Count == 1)
+        {
+            OperationStatusText.Text = "Keep at least one phone folder tab open.";
+            return;
+        }
+
+        var closingIndex = _browserTabs.IndexOf(tab);
+        var wasActive = ReferenceEquals(tab, _activeBrowserTab);
+        _browserTabs.Remove(tab);
+        if (!wasActive)
+        {
+            UpdateBrowserTabsVisibility();
+            return;
+        }
+
+        var nextIndex = Math.Min(closingIndex, _browserTabs.Count - 1);
+        await ActivateBrowserTabAsync(_browserTabs[nextIndex]);
+    }
+
+    private void SetSelectedBrowserTab(BrowserTab tab)
+    {
+        _suppressTabSelection = true;
+        try
+        {
+            _activeBrowserTab = tab;
+            FolderTabsList.SelectedItem = tab;
+            UpdateBrowserTabsVisibility();
+        }
+        finally
+        {
+            _suppressTabSelection = false;
+        }
+    }
+
+    private void SynchronizeActiveBrowserTab()
+    {
+        if (_activeBrowserTab is null || _current is null)
+        {
+            return;
+        }
+
+        _activeBrowserTab.Current = _current;
+        _activeBrowserTab.History.Clear();
+        _activeBrowserTab.History.AddRange(_history.Reverse());
+    }
+
+    private void ResetBrowserTabs()
+    {
+        _suppressTabSelection = true;
+        try
+        {
+            _activeBrowserTab = null;
+            _browserTabs.Clear();
+            FolderTabsList.SelectedItem = null;
+            UpdateBrowserTabsVisibility();
+        }
+        finally
+        {
+            _suppressTabSelection = false;
+        }
+    }
+
+    private void UpdateBrowserTabsVisibility()
+    {
+        FolderTabsList.Visibility = _browserTabs.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private async Task RefreshStorageInfoAsync()
@@ -1789,6 +1997,48 @@ public partial class MainWindow : Window
         string Host,
         int Port,
         string? CertificateFingerprint);
+
+    private sealed class BrowserTab : System.ComponentModel.INotifyPropertyChanged
+    {
+        private NavigationEntry _current;
+
+        public BrowserTab(NavigationEntry current)
+        {
+            _current = current;
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+        public NavigationEntry Current
+        {
+            get => _current;
+            set
+            {
+                if (ReferenceEquals(_current, value) || _current == value)
+                {
+                    return;
+                }
+
+                _current = value;
+                PropertyChanged?.Invoke(
+                    this,
+                    new System.ComponentModel.PropertyChangedEventArgs(nameof(Current)));
+                PropertyChanged?.Invoke(
+                    this,
+                    new System.ComponentModel.PropertyChangedEventArgs(nameof(Title)));
+                PropertyChanged?.Invoke(
+                    this,
+                    new System.ComponentModel.PropertyChangedEventArgs(nameof(PathLabel)));
+            }
+        }
+
+        public List<NavigationEntry> History { get; } = [];
+
+        public string Title => Current.Name;
+
+        public string PathLabel =>
+            string.Join(" > ", Current.Path.Select(segment => segment.Name));
+    }
 
     private sealed record NavigationEntry(
         string Id,

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Phone Transfer"
         Icon="Assets/PhoneTransfer.ico"
+        Style="{StaticResource NativeDarkWindow}"
         Width="980"
         Height="700"
         MinWidth="640"
