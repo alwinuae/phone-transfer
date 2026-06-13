@@ -1,7 +1,7 @@
-# Phone Transfer 0.7.3
+# Phone Transfer 0.7.4
 
-Phone Transfer 0.7.3 is a Windows interface refinement release focused on a
-clean dark workspace and faster multi-folder navigation.
+Phone Transfer 0.7.4 is a Windows reliability and responsive-layout release
+focused on working window controls and fast access to every command.
 
 ## New And Improved
 
@@ -28,8 +28,8 @@ clean dark workspace and faster multi-folder navigation.
 
 ## Installation
 
-1. Install `Phone-Transfer-Android-v0.7.3.apk`.
-2. Install `Phone-Transfer-Windows-Setup-v0.7.3.exe`.
+1. Install `Phone-Transfer-Android-v0.7.4.apk`.
+2. Install `Phone-Transfer-Windows-Setup-v0.7.4.exe`.
 3. Start sharing on Android, then connect through router Wi-Fi or Windows
    Mobile Hotspot. Existing trusted-device profiles remain compatible.
 

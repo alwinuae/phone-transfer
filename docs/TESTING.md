@@ -31,6 +31,23 @@ cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
 
+## 0.7.4 Verification Summary
+
+- The full .NET solution builds with zero warnings and zero errors.
+- WPF regression checks click minimize, maximize, restore, and close and
+  verify the expected state on the containing window.
+- Main and folder command bars remain on one row at every supported test
+  width, scale down without horizontal scrolling, and expand at wider sizes.
+- Off-screen renders verify the compact 1040x680 main window and 720x440
+  independent folder window without wrapping or overlap.
+- Network diagnostics, trusted-phone persistence, and setup preference checks
+  pass.
+- Release packaging produces only the versioned Windows Setup EXE and signed
+  Android APK. The Windows installer upgrades Installed Apps to `0.7.4`.
+- Live desktop capture was unavailable because the bundled Windows automation
+  runtime could not initialize. Deterministic WPF input and layout regression
+  tests cover the affected controls.
+
 ## 0.7.3 Verification Summary
 
 - The full .NET solution builds with zero warnings and zero errors.

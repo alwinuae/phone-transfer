@@ -1,13 +1,17 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.4
+
+- Fixed minimize, maximize, restore, and close across every custom dark form.
+- Replaced horizontal command scrolling with responsive single-row buttons
+  that scale down with the window and expand again when space returns.
+- Added subtle hover animation to command and title-bar buttons.
+- Added direct caption-control and responsive-width regression tests.
+
 ## Shipped In 0.7.3
 
 - Edge-to-edge dark Windows chrome and dark scrollbar, checkbox, expander,
   menu, tooltip, table, and dialog surfaces.
-- Single-row navigation and file command bars that compress at compact window
-  widths without scrolling, wrapping, or overlap.
-- Working custom minimize, maximize, restore, and close controls plus subtle
-  button hover animation.
 - Clean top command strip using the existing file-management buttons, with no
   redundant File/Edit/View menu or duplicate lower action row.
 - Multiple phone-folder tabs with independent path and back history.
