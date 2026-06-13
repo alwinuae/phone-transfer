@@ -8,14 +8,14 @@ clean dark workspace and faster multi-folder navigation.
 - Replaced remaining light Windows surfaces with an edge-to-edge charcoal
   theme, including the title bar, frame, menus, scrollbars, checkboxes,
   expanders, tooltips, tables, lists, dialogs, and disabled states.
-- Added a compact Notepad++-style menu bar with File, Edit, View, Transfer,
-  Phone, Settings, and Help commands.
+- Moved the existing Open, upload, download, folder, clipboard, rename,
+  delete, view, and sorting commands into one clean top command strip.
+- Removed the redundant File/Edit/View menu bar and the duplicate lower
+  command band.
 - Added phone-folder tabs. Open the current folder or a selected folder in a
   new tab, switch between locations, and retain each tab's path and back
   history.
 - Added `Ctrl+T` to open a folder tab and `Ctrl+W` to close the active tab.
-- Preserved the existing independent folder-window workflow under
-  **File > Open folder in new window**.
 - Converted navigation and file-action toolbars to stable single-row layouts.
   Buttons no longer wrap, overlap, or shrink while resizing; compact windows
   use horizontal overflow instead.

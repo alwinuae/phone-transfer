@@ -786,15 +786,6 @@ public partial class MainWindow : Window
     private async void OpenFolderWindowButton_Click(object sender, RoutedEventArgs e) =>
         await OpenFolderInNewTabAsync();
 
-    private async void OpenFolderTabMenu_Click(object sender, RoutedEventArgs e) =>
-        await OpenFolderInNewTabAsync();
-
-    private void OpenFolderWindowMenu_Click(object sender, RoutedEventArgs e) =>
-        OpenFolderInIndependentWindow();
-
-    private async void CloseFolderTabMenu_Click(object sender, RoutedEventArgs e) =>
-        await CloseBrowserTabAsync(_activeBrowserTab);
-
     private async void CloseFolderTabButton_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
@@ -802,21 +793,6 @@ public partial class MainWindow : Window
         {
             await CloseBrowserTabAsync(tab);
         }
-    }
-
-    private void ExitMenu_Click(object sender, RoutedEventArgs e) => Close();
-
-    private void SelectAllMenu_Click(object sender, RoutedEventArgs e) =>
-        SelectAllVisibleItems();
-
-    private void AboutMenu_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show(
-            this,
-            "Phone Transfer 0.7.3\nFast local browsing and file transfer between Windows and Android.",
-            "About Phone Transfer",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
     }
 
     private async Task OpenFolderInNewTabAsync()
@@ -835,23 +811,6 @@ public partial class MainWindow : Window
         var tab = new BrowserTab(destination);
         _browserTabs.Add(tab);
         await ActivateBrowserTabAsync(tab);
-    }
-
-    private void OpenFolderInIndependentWindow()
-    {
-        if (_client is null || _current is null)
-        {
-            return;
-        }
-
-        var selectedFolder = SelectedItems().FirstOrDefault(item => item.IsDirectory);
-        var path = _current.Path.Select(item => (item.Id, item.Name));
-        if (selectedFolder is not null)
-        {
-            path = path.Append((selectedFolder.Id, selectedFolder.Name));
-        }
-        WindowCoordinator.Instance.ShowIndependent(
-            new FolderWindow(_client, path.ToArray()));
     }
 
     private NavigationEntry? SelectedFolderDestination()

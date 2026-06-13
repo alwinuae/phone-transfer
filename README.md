@@ -7,8 +7,8 @@ Windows Mobile Hotspot. File contents stay on the local network.
 ## Version 0.7.3
 
 Version 0.7.3 adds a complete edge-to-edge charcoal Windows theme, custom dark
-window chrome, single-row command bars, a Notepad++-style application menu, and
-multiple phone-folder tabs with independent path and back-history state.
+window chrome, a clean top command strip, and multiple phone-folder tabs with
+independent path and back-history state.
 
 - Sleek Notepad++-inspired dark desktop theme with dark Windows title bars.
 - Responsive fixed-height toolbars wrap cleanly without shrinking or overlap.

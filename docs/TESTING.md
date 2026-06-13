@@ -44,9 +44,9 @@ cd android
 - Main and folder windows use dark application backgrounds. The main window
   and dialogs use custom dark title chrome; scrollbars, checkboxes, expanders,
   menus, tooltips, data grids, lists, and disabled controls use dark templates.
-- The main window exposes File/Edit/View/Transfer/Phone/Settings/Help menus
-  and a dark folder-tab strip. Folder tabs retain their own location and back
-  history; separate folder windows remain available.
+- The main window has no redundant File/Edit/View menu. Its existing
+  file-management, view, and sorting buttons occupy one clean top command
+  strip above navigation and the dark folder-tab strip.
 - Existing selection-state, compact-row, progress-bar, and multi-window
   lifecycle regressions pass.
 - Off-screen renders were checked at 1040x680, 1380x860, 720x440, and 980x640.

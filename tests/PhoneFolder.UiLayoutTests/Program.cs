@@ -56,7 +56,9 @@ internal static class Program
         }
 
         AssertDarkWindowChrome(scope.Window, "Main window");
-        Require<Menu>(scope.Window, "MainMenu");
+        Assert(
+            FindVisualChild<Menu>(scope.Window) is null,
+            "The main window still contains the removed File/Edit/View menu bar.");
         Require<ListBox>(scope.Window, "FolderTabsList");
         AssertDisabled(scope.Window, "DownloadButton");
         AssertDisabled(scope.Window, "CopySelectionButton");

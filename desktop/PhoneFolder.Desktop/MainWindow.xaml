@@ -201,89 +201,115 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Menu x:Name="MainMenu"
-                      Grid.Row="0"
-                      BorderBrush="{StaticResource BorderBrush}"
-                      BorderThickness="0,0,0,1">
-                    <MenuItem Header="_File">
-                        <MenuItem Click="OpenFolderTabMenu_Click"
-                                  Header="Open folder in new tab"
-                                  InputGestureText="Ctrl+T"/>
-                        <MenuItem Click="OpenFolderWindowMenu_Click"
-                                  Header="Open folder in new window"/>
-                        <MenuItem Click="CloseFolderTabMenu_Click"
-                                  Header="Close tab"
-                                  InputGestureText="Ctrl+W"/>
-                        <Separator/>
-                        <MenuItem Click="ExitMenu_Click" Header="Exit"/>
-                    </MenuItem>
-                    <MenuItem Header="_Edit">
-                        <MenuItem Click="CopySelectionButton_Click"
-                                  Header="Copy"
-                                  InputGestureText="Ctrl+C"/>
-                        <MenuItem Click="CutSelectionButton_Click"
-                                  Header="Cut"
-                                  InputGestureText="Ctrl+X"/>
-                        <MenuItem Click="PasteButton_Click"
-                                  Header="Paste"
-                                  InputGestureText="Ctrl+V"/>
-                        <MenuItem Click="RenameButton_Click" Header="Rename"/>
-                        <MenuItem Click="DeleteButton_Click"
-                                  Header="Delete"
-                                  InputGestureText="Delete"/>
-                        <Separator/>
-                        <MenuItem Click="SelectAllMenu_Click"
-                                  Header="Select all"
-                                  InputGestureText="Ctrl+A"/>
-                    </MenuItem>
-                    <MenuItem Header="_View">
-                        <MenuItem Click="FolderPaneButton_Click" Header="Folder pane"/>
-                        <MenuItem Header="File view">
-                            <MenuItem Click="ViewDetails_Click" Header="Details"/>
-                            <MenuItem Click="ViewList_Click" Header="List"/>
-                            <MenuItem Click="ViewTiles_Click" Header="Tiles"/>
-                            <MenuItem Click="ViewSmallIcons_Click" Header="Small icons"/>
-                            <MenuItem Click="ViewMediumIcons_Click" Header="Medium icons"/>
-                            <MenuItem Click="ViewLargeIcons_Click" Header="Large icons"/>
-                        </MenuItem>
-                        <MenuItem Header="Sort by">
-                            <MenuItem Click="SortName_Click" Header="Name"/>
-                            <MenuItem Click="SortModified_Click" Header="Date modified"/>
-                            <MenuItem Click="SortType_Click" Header="Type"/>
-                            <MenuItem Click="SortSize_Click" Header="Size"/>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Click="RefreshButton_Click"
-                                  Header="Refresh"
-                                  InputGestureText="F5"/>
-                    </MenuItem>
-                    <MenuItem Header="_Transfer">
-                        <MenuItem Click="UploadButton_Click" Header="Upload files"/>
-                        <MenuItem Click="UploadFolderButton_Click" Header="Upload folder"/>
-                        <MenuItem Click="DownloadButton_Click" Header="Download selected"/>
-                        <Separator/>
-                        <MenuItem Click="TransfersButton_Click" Header="Transfer progress"/>
-                    </MenuItem>
-                    <MenuItem Header="_Phone">
-                        <MenuItem Click="DiscoverButton_Click" Header="Find on router Wi-Fi"/>
-                        <MenuItem Click="HotspotButton_Click" Header="Find on PC hotspot"/>
-                        <MenuItem Click="SwitchDeviceButton_Click" Header="Connect trusted phone"/>
-                        <Separator/>
-                        <MenuItem Click="ForgetDeviceButton_Click" Header="Manage trusted phones"/>
-                        <MenuItem Click="DisconnectButton_Click" Header="Disconnect"/>
-                    </MenuItem>
-                    <MenuItem Header="_Settings">
-                        <MenuItem Click="SettingsButton_Click" Header="Application setup"/>
-                    </MenuItem>
-                    <MenuItem Header="_Help">
-                        <MenuItem Click="AboutMenu_Click" Header="About Phone Transfer"/>
-                    </MenuItem>
-                </Menu>
+                <Border Grid.Row="0"
+                        Padding="14,8,6,8"
+                        Background="{StaticResource TitleBarBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="FileActionsPanel"
+                                    IsEnabled="False"
+                                    Orientation="Horizontal">
+                            <StackPanel.Resources>
+                                <Style TargetType="Button"
+                                       BasedOn="{StaticResource CompactToolbarButton}"/>
+                            </StackPanel.Resources>
+                            <Button x:Name="OpenMediaButton"
+                                    Click="OpenMediaButton_Click"
+                                    Content="Open"
+                                    ToolTip="Open the selected file (Enter)"/>
+                            <Button Click="UploadButton_Click"
+                                    Content="Upload files"
+                                    ToolTip="Upload files from this PC"/>
+                            <Button Click="UploadFolderButton_Click"
+                                    Content="Upload folder"
+                                    ToolTip="Upload a folder from this PC"/>
+                            <Button x:Name="DownloadButton"
+                                    Click="DownloadButton_Click"
+                                    Content="Download"
+                                    ToolTip="Download selected items"/>
+                            <Button Click="NewFolderButton_Click"
+                                    Content="New folder"
+                                    ToolTip="Create a folder"/>
+                            <Button x:Name="OpenFolderWindowButton"
+                                    Click="OpenFolderWindowButton_Click"
+                                    Content="Open in new tab"
+                                    ToolTip="Keep the current or selected folder open in another tab"/>
+                            <Button x:Name="CopySelectionButton"
+                                    Click="CopySelectionButton_Click"
+                                    Content="Copy"
+                                    ToolTip="Copy checked items (Ctrl+C)"/>
+                            <Button x:Name="CutSelectionButton"
+                                    Click="CutSelectionButton_Click"
+                                    Content="Cut"
+                                    ToolTip="Cut checked items (Ctrl+X)"/>
+                            <Button x:Name="PasteButton"
+                                    Click="PasteButton_Click"
+                                    Content="Paste"
+                                    ToolTip="Paste into this folder (Ctrl+V)"/>
+                            <Button x:Name="CopyToButton"
+                                    Click="CopyButton_Click"
+                                    Content="Copy to..."
+                                    ToolTip="Copy all selected items to another phone folder"/>
+                            <Button x:Name="MoveToButton"
+                                    Click="MoveButton_Click"
+                                    Content="Move to"
+                                    ToolTip="Move all selected items"/>
+                            <Button x:Name="RenameButton"
+                                    Click="RenameButton_Click"
+                                    Content="Rename"
+                                    ToolTip="Rename the selected item"/>
+                            <Button x:Name="DeleteButton"
+                                    Click="DeleteButton_Click"
+                                    Content="Delete"
+                                    ToolTip="Delete selected items (Delete)"/>
+                            <Border Width="1"
+                                    Height="24"
+                                    Margin="3,5,10,5"
+                                    Background="{StaticResource BorderBrush}"/>
+                            <Button x:Name="FolderPaneButton"
+                                    Click="FolderPaneButton_Click"
+                                    Content="Folders: On"
+                                    ToolTip="Show or hide the resizable folder navigation pane"/>
+                            <Button x:Name="ViewModeButton"
+                                    Click="ViewModeButton_Click"
+                                    Content="View: Details"
+                                    ToolTip="Change view (Ctrl+1 through Ctrl+6)">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="ViewDetails_Click" Header="Details"/>
+                                        <MenuItem Click="ViewList_Click" Header="List"/>
+                                        <MenuItem Click="ViewTiles_Click" Header="Tiles"/>
+                                        <MenuItem Click="ViewSmallIcons_Click" Header="Small icons"/>
+                                        <MenuItem Click="ViewMediumIcons_Click" Header="Medium icons"/>
+                                        <MenuItem Click="ViewLargeIcons_Click" Header="Large icons"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                            <Button x:Name="SortModeButton"
+                                    Click="SortModeButton_Click"
+                                    Content="Sort: Name"
+                                    ToolTip="Sort files and folders">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="SortName_Click" Header="Name"/>
+                                        <MenuItem Click="SortModified_Click" Header="Date modified"/>
+                                        <MenuItem Click="SortType_Click" Header="Type"/>
+                                        <MenuItem Click="SortSize_Click" Header="Size"/>
+                                        <Separator/>
+                                        <MenuItem Click="SortAscending_Click" Header="Ascending"/>
+                                        <MenuItem Click="SortDescending_Click" Header="Descending"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
 
                 <Border Grid.Row="1"
                         Padding="14,10,6,6"
@@ -403,116 +429,7 @@
                     </ListBox>
                 </Border>
 
-                <Border Grid.Row="3"
-                        Padding="14,8,6,6"
-                        BorderBrush="{StaticResource BorderBrush}"
-                        BorderThickness="0,0,0,1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Disabled">
-                        <StackPanel x:Name="FileActionsPanel"
-                                    IsEnabled="False"
-                                    Orientation="Horizontal">
-                            <StackPanel.Resources>
-                                <Style TargetType="Button"
-                                       BasedOn="{StaticResource CompactToolbarButton}"/>
-                            </StackPanel.Resources>
-                            <Button x:Name="OpenMediaButton"
-                                    Click="OpenMediaButton_Click"
-                                    Content="Open"
-                                    ToolTip="Open the selected file (Enter)"/>
-                            <Button Click="UploadButton_Click" Content="Upload files" ToolTip="Upload files from this PC"/>
-                            <Button Click="UploadFolderButton_Click" Content="Upload folder" ToolTip="Upload a folder from this PC"/>
-                            <Button x:Name="DownloadButton"
-                                    Click="DownloadButton_Click"
-                                    Content="Download"
-                                    ToolTip="Download selected items"/>
-                            <Button Click="NewFolderButton_Click" Content="New folder" ToolTip="Create a folder"/>
-                            <Button x:Name="OpenFolderWindowButton"
-                                    Click="OpenFolderWindowButton_Click"
-                                    Content="Open in new tab"
-                                    ToolTip="Keep the current or selected folder open in another tab"/>
-                            <Button x:Name="CopySelectionButton"
-                                    Click="CopySelectionButton_Click"
-                                    Content="Copy"
-                                    ToolTip="Copy checked items (Ctrl+C)"/>
-                            <Button x:Name="CutSelectionButton"
-                                    Click="CutSelectionButton_Click"
-                                    Content="Cut"
-                                    ToolTip="Cut checked items (Ctrl+X)"/>
-                            <Button x:Name="PasteButton"
-                                    Click="PasteButton_Click"
-                                    Content="Paste"
-                                    ToolTip="Paste into this folder (Ctrl+V)"/>
-                            <Button x:Name="CopyToButton"
-                                    Click="CopyButton_Click"
-                                    Content="Copy to..."
-                                    ToolTip="Copy all selected items to another phone folder"/>
-                            <Button x:Name="MoveToButton"
-                                    Click="MoveButton_Click"
-                                    Content="Move to"
-                                    ToolTip="Move all selected items"/>
-                            <Button x:Name="RenameButton"
-                                    Click="RenameButton_Click"
-                                    Content="Rename"
-                                    ToolTip="Rename the selected item"/>
-                            <Button x:Name="DeleteButton"
-                                    Click="DeleteButton_Click"
-                                    Content="Delete"
-                                    ToolTip="Delete selected items (Delete)"/>
-                        </StackPanel>
-                        </ScrollViewer>
-                        <StackPanel Grid.Row="1"
-                                    Margin="0,7,0,0"
-                                    HorizontalAlignment="Right"
-                                    Orientation="Horizontal">
-                            <Button x:Name="FolderPaneButton"
-                                    Click="FolderPaneButton_Click"
-                                    Content="Folders: On"
-                                    ToolTip="Show or hide the resizable folder navigation pane"
-                                    Style="{StaticResource ToolbarButton}"/>
-                            <Button x:Name="ViewModeButton"
-                                    Click="ViewModeButton_Click"
-                                    Content="View: Details"
-                                    ToolTip="Change view (Ctrl+1 Details, Ctrl+2 List, Ctrl+3 Thumbnails)"
-                                    Style="{StaticResource ToolbarButton}">
-                                <Button.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Click="ViewDetails_Click" Header="Details"/>
-                                        <MenuItem Click="ViewList_Click" Header="List"/>
-                                        <MenuItem Click="ViewTiles_Click" Header="Tiles"/>
-                                        <MenuItem Click="ViewSmallIcons_Click" Header="Small icons"/>
-                                        <MenuItem Click="ViewMediumIcons_Click" Header="Medium icons"/>
-                                        <MenuItem Click="ViewLargeIcons_Click" Header="Large icons"/>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
-                            </Button>
-                            <Button x:Name="SortModeButton"
-                                    Click="SortModeButton_Click"
-                                    Content="Sort: Name"
-                                    ToolTip="Sort files and folders"
-                                    Style="{StaticResource ToolbarButton}">
-                                <Button.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Click="SortName_Click" Header="Name"/>
-                                        <MenuItem Click="SortModified_Click" Header="Date modified"/>
-                                        <MenuItem Click="SortType_Click" Header="Type"/>
-                                        <MenuItem Click="SortSize_Click" Header="Size"/>
-                                        <Separator/>
-                                        <MenuItem Click="SortAscending_Click" Header="Ascending"/>
-                                        <MenuItem Click="SortDescending_Click" Header="Descending"/>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Grid Grid.Row="4">
+                <Grid Grid.Row="3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="FolderColumn" Width="220" MinWidth="120"/>
                         <ColumnDefinition x:Name="FolderSplitterColumn" Width="6"/>
@@ -692,7 +609,7 @@
                     </Grid>
                 </Grid>
 
-                <Border Grid.Row="5"
+                <Border Grid.Row="4"
                         Padding="18,12"
                         BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="0,1,0,0">

@@ -6,7 +6,8 @@
   menu, tooltip, table, and dialog surfaces.
 - Single-row navigation and file command bars with stable button dimensions
   and horizontal overflow at compact window widths.
-- Notepad++-style File/Edit/View/Transfer/Phone/Settings/Help menu.
+- Clean top command strip using the existing file-management buttons, with no
+  redundant File/Edit/View menu or duplicate lower action row.
 - Multiple phone-folder tabs with independent path and back history.
 - Separate folder windows remain available from the File menu.
 
