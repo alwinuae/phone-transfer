@@ -29,10 +29,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Disabled">
-                <StackPanel x:Name="FolderNavigationPanel"
-                            Orientation="Horizontal">
+                <UniformGrid x:Name="FolderNavigationPanel"
+                             Rows="1">
                     <Button x:Name="BackButton"
                             Click="BackButton_Click"
                             Content="&lt; Back"
@@ -44,8 +42,7 @@
                     <Button Click="RefreshButton_Click"
                             Content="Refresh"
                             Style="{StaticResource NavigationButton}"/>
-                </StackPanel>
-                </ScrollViewer>
+                </UniformGrid>
                 <TextBlock x:Name="PathText"
                            Grid.Row="1"
                            Margin="2,2,8,6"
@@ -63,14 +60,12 @@
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled">
-            <StackPanel x:Name="FolderActionsPanel"
-                        Orientation="Horizontal">
-                <StackPanel.Resources>
+            <UniformGrid x:Name="FolderActionsPanel"
+                         Rows="1">
+                <UniformGrid.Resources>
                     <Style TargetType="Button"
-                           BasedOn="{StaticResource CompactToolbarButton}"/>
-                </StackPanel.Resources>
+                           BasedOn="{StaticResource ResponsiveToolbarButton}"/>
+                </UniformGrid.Resources>
                 <Button Click="UploadButton_Click" Content="Upload files"/>
                 <Button x:Name="DownloadButton"
                         Click="DownloadButton_Click"
@@ -129,8 +124,7 @@
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
-            </StackPanel>
-            </ScrollViewer>
+            </UniformGrid>
         </Border>
 
         <Grid Grid.Row="2"

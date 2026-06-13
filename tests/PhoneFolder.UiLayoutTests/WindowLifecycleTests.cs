@@ -1,5 +1,6 @@
 using PhoneFolder.Desktop.Services;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 internal static class WindowLifecycleTests
@@ -9,6 +10,7 @@ internal static class WindowLifecycleTests
         application.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var coordinator = WindowCoordinator.Instance;
         coordinator.Initialize(application);
+        ValidateCaptionCommands(coordinator);
 
         var main = CreateWindow("Lifecycle main");
         var firstFolder = CreateWindow("Lifecycle folder 1");
@@ -57,6 +59,44 @@ internal static class WindowLifecycleTests
             PumpDispatcher();
         }
     }
+
+    private static void ValidateCaptionCommands(WindowCoordinator coordinator)
+    {
+        var window = CreateWindow("Caption command test");
+        coordinator.ShowIndependent(window);
+        PumpDispatcher();
+        window.ApplyTemplate();
+
+        var minimize = RequireCaptionButton(window, "MinimizeButton");
+        var maximize = RequireCaptionButton(window, "MaximizeButton");
+        var restore = RequireCaptionButton(window, "RestoreButton");
+        var close = RequireCaptionButton(window, "CloseButton");
+
+        Click(minimize);
+        PumpDispatcher();
+        Assert(window.WindowState == WindowState.Minimized, "The custom minimize button did not minimize its window.");
+
+        window.WindowState = WindowState.Normal;
+        PumpDispatcher();
+        Click(maximize);
+        PumpDispatcher();
+        Assert(window.WindowState == WindowState.Maximized, "The custom maximize button did not maximize its window.");
+
+        Click(restore);
+        PumpDispatcher();
+        Assert(window.WindowState == WindowState.Normal, "The custom restore button did not restore its window.");
+
+        Click(close);
+        PumpDispatcher();
+        Assert(!window.IsVisible, "The custom close button did not close its window.");
+    }
+
+    private static Button RequireCaptionButton(Window window, string name) =>
+        window.Template.FindName(name, window) as Button
+        ?? throw new InvalidOperationException($"The custom title bar is missing {name}.");
+
+    private static void Click(Button button) =>
+        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
     private static Window CreateWindow(string title) =>
         new()

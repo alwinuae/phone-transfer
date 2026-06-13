@@ -4,12 +4,14 @@
 
 - Edge-to-edge dark Windows chrome and dark scrollbar, checkbox, expander,
   menu, tooltip, table, and dialog surfaces.
-- Single-row navigation and file command bars with stable button dimensions
-  and horizontal overflow at compact window widths.
+- Single-row navigation and file command bars that compress at compact window
+  widths without scrolling, wrapping, or overlap.
+- Working custom minimize, maximize, restore, and close controls plus subtle
+  button hover animation.
 - Clean top command strip using the existing file-management buttons, with no
   redundant File/Edit/View menu or duplicate lower action row.
 - Multiple phone-folder tabs with independent path and back history.
-- Separate folder windows remain available from the File menu.
+- Separate folder windows remain available from the folder action buttons.
 
 ## Shipped In 0.7.2
 

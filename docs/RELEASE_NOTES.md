@@ -16,9 +16,12 @@ clean dark workspace and faster multi-folder navigation.
   new tab, switch between locations, and retain each tab's path and back
   history.
 - Added `Ctrl+T` to open a folder tab and `Ctrl+W` to close the active tab.
-- Converted navigation and file-action toolbars to stable single-row layouts.
-  Buttons no longer wrap, overlap, or shrink while resizing; compact windows
-  use horizontal overflow instead.
+- Converted navigation and file-action toolbars to responsive single-row
+  layouts. Buttons and labels scale down at compact widths instead of
+  wrapping, overlapping, or introducing horizontal scrolling.
+- Fixed minimize, maximize, restore, and close actions across every custom
+  dark title bar.
+- Added subtle hover animation to normal, toolbar, and title-bar buttons.
 - Kept the existing compact table rows, sorting, view modes, drag and drop,
   multi-selection, thumbnails, streaming, concurrent transfers, storage
   visibility, and trusted-phone reconnect behavior.

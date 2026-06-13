@@ -271,11 +271,43 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="CaptionButtonBorder"
-                                Background="{TemplateBinding Background}">
+                                Background="{TemplateBinding Background}"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="CaptionButtonScale"/>
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CaptionButtonScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1.06"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="CaptionButtonScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1.06"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CaptionButtonScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="CaptionButtonScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="CaptionButtonBorder"
                                         Property="Background"
@@ -370,27 +402,25 @@
                                                    FontSize="12"
                                                    Text="{TemplateBinding Title}"
                                                    TextTrimming="CharacterEllipsis"/>
-                                        <Button Grid.Column="2"
-                                                Command="{x:Static SystemCommands.MinimizeWindowCommand}"
-                                                CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                        <Button x:Name="MinimizeButton"
+                                                Grid.Column="2"
+                                                Click="MinimizeWindowButton_Click"
                                                 Content="&#xE921;"
                                                 Style="{StaticResource WindowCaptionButton}"/>
                                         <Button x:Name="MaximizeButton"
                                                 Grid.Column="3"
-                                                Command="{x:Static SystemCommands.MaximizeWindowCommand}"
-                                                CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                Click="MaximizeWindowButton_Click"
                                                 Content="&#xE922;"
                                                 Style="{StaticResource WindowCaptionButton}"/>
                                         <Button x:Name="RestoreButton"
                                                 Grid.Column="3"
-                                                Command="{x:Static SystemCommands.RestoreWindowCommand}"
-                                                CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                Click="RestoreWindowButton_Click"
                                                 Content="&#xE923;"
                                                 Style="{StaticResource WindowCaptionButton}"
                                                 Visibility="Collapsed"/>
-                                        <Button Grid.Column="4"
-                                                Command="{x:Static SystemCommands.CloseWindowCommand}"
-                                                CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                        <Button x:Name="CloseButton"
+                                                Grid.Column="4"
+                                                Click="CloseWindowButton_Click"
                                                 Content="&#xE8BB;"
                                                 Style="{StaticResource WindowCloseButton}"/>
                                     </Grid>
@@ -442,12 +472,44 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5">
+                                CornerRadius="5"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="ButtonScale"/>
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1.025"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1.025"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.88"/>
                                 <Setter TargetName="ButtonBorder"
@@ -495,6 +557,94 @@
             <Setter Property="Padding" Value="10,5"/>
         </Style>
 
+        <Style x:Key="ResponsiveToolbarButton"
+               TargetType="Button"
+               BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                ClipToBounds="True"
+                                CornerRadius="5"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="ButtonScale"/>
+                            </Border.RenderTransform>
+                            <Viewbox HorizontalAlignment="Stretch"
+                                     VerticalAlignment="Center"
+                                     Stretch="Uniform"
+                                     StretchDirection="DownOnly">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  RecognizesAccessKey="True"/>
+                            </Viewbox>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1.025"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1.025"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.88"/>
+                                <Setter TargetName="ButtonBorder"
+                                        Property="BorderBrush"
+                                        Value="#626667"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.72"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="BorderBrush"
+                                        Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Background"
+                                        Value="{StaticResource DisabledBrush}"/>
+                                <Setter TargetName="ButtonBorder"
+                                        Property="BorderBrush"
+                                        Value="#303233"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PrimaryButton"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
@@ -505,15 +655,14 @@
 
         <Style x:Key="NavigationButton"
                TargetType="Button"
-               BasedOn="{StaticResource ToolbarButton}">
-            <Setter Property="MinWidth" Value="74"/>
+               BasedOn="{StaticResource ResponsiveToolbarButton}">
             <Setter Property="Background" Value="#292C2D"/>
             <Setter Property="BorderBrush" Value="#55595A"/>
         </Style>
 
         <Style x:Key="DisconnectedButton"
                TargetType="Button"
-               BasedOn="{StaticResource ToolbarButton}">
+               BasedOn="{StaticResource ResponsiveToolbarButton}">
             <Setter Property="Background" Value="#352829"/>
             <Setter Property="BorderBrush" Value="#75484A"/>
             <Setter Property="Foreground" Value="#D88A8A"/>
@@ -521,7 +670,7 @@
 
         <Style x:Key="ConnectedDisconnectButton"
                TargetType="Button"
-               BasedOn="{StaticResource ToolbarButton}">
+               BasedOn="{StaticResource ResponsiveToolbarButton}">
             <Setter Property="Background" Value="#3B292A"/>
             <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
             <Setter Property="Foreground" Value="#F0A0A0"/>

@@ -38,9 +38,9 @@ cd android
   existing localization warnings.
 - WPF layout regression passes main-window widths of 1040, 1180, 1380, and
   1600 pixels and folder-window widths of 720, 800, 980, and 1200 pixels.
-- Navigation and file command buttons retain stable dimensions and remain on
-  one horizontal row at every tested width. Compact widths use horizontal
-  overflow instead of wrapping, shrinking, or overlapping.
+- Navigation and file command buttons remain on one horizontal row at every
+  tested width. Compact widths reduce each button and its label without
+  scrolling, wrapping, or overlapping, then grow again with the window.
 - Main and folder windows use dark application backgrounds. The main window
   and dialogs use custom dark title chrome; scrollbars, checkboxes, expanders,
   menus, tooltips, data grids, lists, and disabled controls use dark templates.
@@ -48,7 +48,8 @@ cd android
   file-management, view, and sorting buttons occupy one clean top command
   strip above navigation and the dark folder-tab strip.
 - Existing selection-state, compact-row, progress-bar, and multi-window
-  lifecycle regressions pass.
+  lifecycle regressions pass. New title-bar checks click minimize, maximize,
+  restore, and close and verify the expected window state.
 - Off-screen renders were checked at 1040x680, 1380x860, 720x440, and 980x640.
 - Release packaging produced the installable Setup EXE and signed APK with
   matching SHA-256 entries and no portable Windows package.

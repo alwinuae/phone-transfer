@@ -3,6 +3,7 @@ using PhoneFolder.Desktop.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -42,17 +43,26 @@ internal static class Program
     private static void ValidateMainWindow(string? renderDirectory)
     {
         using var scope = new WindowScope(new MainWindow());
+        double? narrowActionWidth = null;
         foreach (var width in new[] { 1040d, 1180d, 1380d, 1600d })
         {
             Layout(scope.Window, width, 680);
             AssertToolbarLayout(
-                Require<StackPanel>(scope.Window, "MainHeaderButtonsPanel"),
-                $"main header at {width:0}px",
-                70);
-            AssertToolbarLayout(
-                Require<StackPanel>(scope.Window, "FileActionsPanel"),
-                $"main file actions at {width:0}px",
-                72);
+                Require<UniformGrid>(scope.Window, "MainHeaderButtonsPanel"),
+                $"main header at {width:0}px");
+            var actionWidth = AssertToolbarLayout(
+                Require<UniformGrid>(scope.Window, "FileActionsPanel"),
+                $"main file actions at {width:0}px");
+            if (narrowActionWidth is null)
+            {
+                narrowActionWidth = actionWidth;
+            }
+            else if (Math.Abs(width - 1600) < 0.1)
+            {
+                Assert(
+                    actionWidth > narrowActionWidth + 10,
+                    "Main file-action buttons do not grow and shrink with the window.");
+            }
         }
 
         AssertDarkWindowChrome(scope.Window, "Main window");
@@ -89,17 +99,26 @@ internal static class Program
         using var client = new RemoteClient("127.0.0.1", 8765, "layout-test");
         using var scope = new WindowScope(
             new FolderWindow(client, [("root", "Phone")]));
+        double? narrowActionWidth = null;
         foreach (var width in new[] { 720d, 800d, 980d, 1200d })
         {
             Layout(scope.Window, width, 440);
             AssertToolbarLayout(
-                Require<StackPanel>(scope.Window, "FolderNavigationPanel"),
-                $"folder navigation at {width:0}px",
-                70);
-            AssertToolbarLayout(
-                Require<StackPanel>(scope.Window, "FolderActionsPanel"),
-                $"folder actions at {width:0}px",
-                72);
+                Require<UniformGrid>(scope.Window, "FolderNavigationPanel"),
+                $"folder navigation at {width:0}px");
+            var actionWidth = AssertToolbarLayout(
+                Require<UniformGrid>(scope.Window, "FolderActionsPanel"),
+                $"folder actions at {width:0}px");
+            if (narrowActionWidth is null)
+            {
+                narrowActionWidth = actionWidth;
+            }
+            else if (Math.Abs(width - 1200) < 0.1)
+            {
+                Assert(
+                    actionWidth > narrowActionWidth + 10,
+                    "Folder action buttons do not grow and shrink with the window.");
+            }
         }
 
         AssertDarkWindowChrome(scope.Window, "Folder window");
@@ -238,13 +257,15 @@ internal static class Program
         Assert(label.Text == "42%", "Progress percentage text is not rendered by the bar template.");
     }
 
-    private static void AssertToolbarLayout(
+    private static double AssertToolbarLayout(
         Panel panel,
-        string label,
-        double minimumWidth = 78)
+        string label)
     {
         var buttons = panel.Children.OfType<Button>().ToArray();
         Assert(buttons.Length > 0, $"{label} contains no buttons.");
+        Assert(
+            FindVisualAncestor<ScrollViewer>(panel) is null,
+            $"{label} is still inside a horizontal scrolling container.");
 
         foreach (var button in buttons)
         {
@@ -252,8 +273,8 @@ internal static class Program
                 Math.Abs(button.ActualHeight - 34) < 0.75,
                 $"{label}: {button.NameOrContent()} height changed to {button.ActualHeight:0.##}.");
             Assert(
-                button.ActualWidth >= minimumWidth - 0.75,
-                $"{label}: {button.NameOrContent()} width shrank to {button.ActualWidth:0.##}.");
+                button.ActualWidth >= 24,
+                $"{label}: {button.NameOrContent()} became unusably narrow at {button.ActualWidth:0.##}.");
             var origin = button.TranslatePoint(new Point(0, 0), panel);
             Assert(origin.X >= 0 && origin.Y >= 0, $"{label}: a button is outside its panel.");
             Assert(
@@ -284,6 +305,8 @@ internal static class Program
                     $"{label}: {buttons[first].NameOrContent()} overlaps {buttons[second].NameOrContent()}.");
             }
         }
+
+        return buttons.Average(button => button.ActualWidth);
     }
 
     private static void AssertDarkWindowChrome(Window window, string label)
@@ -333,6 +356,21 @@ internal static class Program
             {
                 return descendant;
             }
+        }
+        return null;
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject child)
+        where T : DependencyObject
+    {
+        var current = VisualTreeHelper.GetParent(child);
+        while (current is not null)
+        {
+            if (current is T match)
+            {
+                return match;
+            }
+            current = VisualTreeHelper.GetParent(current);
         }
         return null;
     }
