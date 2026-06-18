@@ -492,7 +492,7 @@ public partial class MainWindow : Window
             ConnectionStatusText.Text = $"Connected to {info.Name}";
             DeviceDetailsText.Text = $"{HotspotService.ConnectionDescription(endpoint.Host)}"
                 + $" | HTTPS | Protocol {info.ProtocolVersion}\n"
-                + $"Certificate SHA-256:\n{info.CertificateFingerprint}";
+                + $"Certificate SHA-256:\n{FormatFingerprint(info.CertificateFingerprint)}";
             _history.Clear();
             _folderRoots.Clear();
             ResetBrowserTabs();
@@ -815,12 +815,33 @@ public partial class MainWindow : Window
         }
     }
 
-    private void InternetTransferButton_Click(object sender, RoutedEventArgs e)
+    private async void InternetTransferButton_Click(object sender, RoutedEventArgs e)
     {
         SetupExpander.IsExpanded = true;
-        HostTextBox.Focus();
-        OperationStatusText.Text =
-            "Enter the phone's reachable online, VPN, or tunnel address, then connect with the same access code.";
+        var current = string.IsNullOrWhiteSpace(HostTextBox.Text)
+            ? "https://your-phone-address:8765"
+            : $"{HostTextBox.Text}:{PortTextBox.Text}";
+        var address = PromptWindow.Show(
+            this,
+            "Internet transfer",
+            "Online, VPN, or tunnel address",
+            current);
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            HostTextBox.Focus();
+            OperationStatusText.Text =
+                "Enter a reachable online, VPN, or tunnel address, then connect with the same access code.";
+            return;
+        }
+        if (!ApplyEndpointText(address.Trim(), out var error))
+        {
+            ShowError(error);
+            return;
+        }
+
+        _pendingSendMode = "online";
+        OperationStatusText.Text = "Connecting through the online address...";
+        await ConnectFromFieldsAsync(automatic: false);
     }
 
     private async Task OpenFolderInNewTabAsync()
@@ -998,11 +1019,6 @@ public partial class MainWindow : Window
 
     private async void SendToPhoneDownloads_Click(object sender, RoutedEventArgs e)
     {
-        if (!EnsureConnected())
-        {
-            return;
-        }
-
         var dialog = new OpenFileDialog
         {
             Title = "Choose files to send to phone Downloads",
@@ -1012,6 +1028,19 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             await UploadPathsToPhoneDownloadsAsync(dialog.FileNames);
+        }
+    }
+
+    private async void SendFolderToPhoneDownloads_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Choose a folder to send to phone Downloads",
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            await UploadPathsToPhoneDownloadsAsync([dialog.FolderName]);
         }
     }
 
@@ -1151,10 +1180,11 @@ public partial class MainWindow : Window
 
     private void FilesHost_DragOver(object sender, DragEventArgs e)
     {
-        var accepted = _client is not null
+        var hasFileDrop = e.Data.GetDataPresent(DataFormats.FileDrop);
+        var hasRemoteItems = _client is not null
             && _current is not null
-            && (e.Data.GetDataPresent(DataFormats.FileDrop)
-                || e.Data.GetDataPresent(RemoteItemsFormat));
+            && e.Data.GetDataPresent(RemoteItemsFormat);
+        var accepted = hasFileDrop || hasRemoteItems;
         e.Effects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
         DropHint.Visibility = accepted ? Visibility.Visible : Visibility.Collapsed;
         e.Handled = true;
@@ -1208,17 +1238,22 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
-        if (_current is null
-            || !e.Data.GetDataPresent(DataFormats.FileDrop)
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)
             || e.Data.GetData(DataFormats.FileDrop) is not string[] paths)
         {
             return;
         }
 
-        var target = FindDataContext<RemoteItem>(e.OriginalSource as DependencyObject);
-        var destinationId = target is { IsDirectory: true } ? target.Id : _current.Id;
-        var destinationName = target is { IsDirectory: true } ? target.Name : _current.Name;
-        await UploadPathsAsync(paths, destinationId, destinationName);
+        if (_client is null)
+        {
+            RememberPendingSendToPhone(paths, _pendingSendMode);
+            OperationStatusText.Text =
+                $"Queued {paths.Length} dropped item(s). Connect to a phone to send them to phone Downloads.";
+            e.Handled = true;
+            return;
+        }
+
+        await UploadPathsToPhoneDownloadsAsync(paths);
         e.Handled = true;
     }
 
@@ -2144,6 +2179,12 @@ public partial class MainWindow : Window
 
     public void HandleStartupArgs(IReadOnlyList<string> args)
     {
+        BringToFront();
+        if (args.Count == 0)
+        {
+            return;
+        }
+
         var mode = "wifi";
         var paths = new List<string>();
         for (var index = 0; index < args.Count; index++)
@@ -2399,6 +2440,77 @@ public partial class MainWindow : Window
         return string.IsNullOrWhiteSpace(profile)
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Downloads")
             : Path.Combine(profile, "Downloads");
+    }
+
+    private bool ApplyEndpointText(string text, out string error)
+    {
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            error = "Enter the phone's online, VPN, or tunnel address.";
+            return false;
+        }
+
+        var candidate = text.Contains("://", StringComparison.Ordinal)
+            ? text
+            : $"https://{text}";
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
+            || string.IsNullOrWhiteSpace(uri.Host))
+        {
+            error = "Enter a valid address, for example example.com:8765.";
+            return false;
+        }
+
+        if (!uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+            && !uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+        {
+            error = "Phone Transfer uses an HTTPS address, VPN address, or tunnel URL.";
+            return false;
+        }
+
+        var port = uri.IsDefaultPort ? CurrentPortOrDefault() : uri.Port;
+        if (port is < 1 or > 65535)
+        {
+            error = "Enter a valid port number between 1 and 65535.";
+            return false;
+        }
+
+        HostTextBox.Text = uri.Host;
+        PortTextBox.Text = port.ToString();
+        return true;
+    }
+
+    private int CurrentPortOrDefault() =>
+        int.TryParse(PortTextBox.Text, out var port) && port is >= 1 and <= 65535
+            ? port
+            : 8765;
+
+    private void BringToFront()
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
+    private static string FormatFingerprint(string value)
+    {
+        var normalized = new string(value.Where(Uri.IsHexDigit).ToArray()).ToUpperInvariant();
+        if (normalized.Length == 0)
+        {
+            return value;
+        }
+
+        return string.Join(
+            " ",
+            Enumerable.Range(0, (normalized.Length + 7) / 8)
+                .Select(index =>
+                    normalized.Substring(index * 8, Math.Min(8, normalized.Length - index * 8))));
     }
 
     private static string ReserveLocalPath(string directory, string name, bool isDirectory)

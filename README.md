@@ -4,12 +4,23 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.7.4
+## Version 0.7.5
 
-Version 0.7.4 adds faster send-to-phone and phone-to-PC share workflows while
-keeping the custom Windows caption fixes, responsive single-row toolbars, and
-edge-to-edge charcoal theme.
+Version 0.7.5 fixes the Windows send-to-phone cycles and keeps the 0.7.4
+transfer workflow improvements, custom Windows caption fixes, responsive
+single-row toolbars, and edge-to-edge charcoal theme.
 
+- Explorer SendTo and right-click launches now forward into the already-open
+  app, so selected files and folders are queued in one transfer window.
+- Windows right-click verbs use multi-select `%*` forwarding for Wi-Fi and
+  Online sends instead of only receiving one selected path.
+- Dropping files or folders onto the app now sends them to phone Downloads by
+  default.
+- The Quick action menu includes separate file and folder sends to phone
+  Downloads.
+- Internet transfer prompts for a reachable online, VPN, or tunnel address and
+  connects directly with the existing access code/trusted device flow.
+- Connected-phone certificate text is grouped so it wraps inside the left pane.
 - Sleek Notepad++-inspired dark desktop theme with dark Windows title bars.
 - Working minimize, maximize, restore, and close controls on every form.
 - Responsive fixed-height toolbars shrink cleanly without scrolling or overlap.
@@ -107,8 +118,8 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-Setup-v0.7.4.exe
-artifacts/release/Phone-Transfer-Android-v0.7.4.apk
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.5.exe
+artifacts/release/Phone-Transfer-Android-v0.7.5.apk
 artifacts/release/SHA256SUMS.txt
 ```
 

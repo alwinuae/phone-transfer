@@ -1,11 +1,23 @@
-# Phone Transfer 0.7.4
+# Phone Transfer 0.7.5
 
-Phone Transfer 0.7.4 is a transfer-workflow and Windows polish release
-focused on faster send-to-phone actions, phone-to-PC sharing, and cleaner
-navigation.
+Phone Transfer 0.7.5 is a reliability release for the Windows send-to-phone
+and online-transfer cycles. It keeps the 0.7.4 workflow polish and fixes the
+paths that could appear in the UI but fail during real use.
 
 ## New And Improved
 
+- Added a single-instance command bridge so Explorer SendTo/right-click
+  invocations forward into the already-open app instead of opening disconnected
+  extra windows.
+- Fixed Windows right-click Wi-Fi and Online verbs to support multi-select and
+  pass all selected files/folders with `%*`.
+- Changed app-window file/folder drops to send to phone Downloads by default.
+- Added a separate Quick action entry for sending a PC folder to phone
+  Downloads.
+- Made Internet transfer prompt for a reachable online, VPN, or tunnel address
+  and immediately connect using the existing access code/trusted-device flow.
+- Wrapped the connected-phone certificate fingerprint in groups so it remains
+  readable in the left connection pane.
 - Replaced remaining light Windows surfaces with an edge-to-edge charcoal
   theme, including the title bar, frame, menus, scrollbars, checkboxes,
   expanders, tooltips, tables, lists, dialogs, and disabled states.
@@ -47,8 +59,8 @@ navigation.
 
 ## Installation
 
-1. Install `Phone-Transfer-Android-v0.7.4.apk`.
-2. Install `Phone-Transfer-Windows-Setup-v0.7.4.exe`.
+1. Install `Phone-Transfer-Android-v0.7.5.apk`.
+2. Install `Phone-Transfer-Windows-Setup-v0.7.5.exe`.
 3. Start sharing on Android, then connect through router Wi-Fi or Windows
    Mobile Hotspot. Existing trusted-device profiles remain compatible.
 

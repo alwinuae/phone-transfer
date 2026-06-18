@@ -13,7 +13,7 @@ Use Microsoft Trusted Signing or a public CA code-signing certificate:
 
 1. Sign `artifacts\publish\windows\PhoneTransfer.exe`.
 2. Build the Inno Setup installer so the signed application is embedded.
-3. Sign `Phone-Transfer-Windows-Setup-v0.7.4.exe`.
+3. Sign `Phone-Transfer-Windows-Setup-v0.7.5.exe`.
 4. Verify both signatures with `signtool verify /pa /v`.
 5. Upload the immutable signed Setup EXE to the versioned HTTPS URL and
    resubmit Product ID `4786b76b-9f7e-4932-a097-80d6563c4cdd`.
@@ -38,10 +38,10 @@ MSIX lets Microsoft sign and host the certified package:
   -IdentityName "<Package/Identity/Name>" `
   -Publisher "<Package/Identity/Publisher>" `
   -PublisherDisplayName "ALWIN THOMAS" `
-  -Version "0.7.4.0"
+  -Version "0.7.5.0"
 ```
 
-4. Upload `artifacts\release\Phone-Transfer-Windows-Store-v0.7.4-x64.msix`
+4. Upload `artifacts\release\Phone-Transfer-Windows-Store-v0.7.5-x64.msix`
    directly on the Partner Center Packages page. An MSIX submission does not
    use the external Package URL field.
 

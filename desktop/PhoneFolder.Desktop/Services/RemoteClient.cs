@@ -72,7 +72,7 @@ public sealed class RemoteClient : IDisposable
                 "X-Phone-Transfer-Trusted-Token",
                 trustedToken);
         }
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.3");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Phone-Transfer-Desktop/0.7.5");
         _httpClient.DefaultRequestHeaders.ExpectContinue = false;
     }
 

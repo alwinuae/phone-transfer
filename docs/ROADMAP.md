@@ -1,5 +1,14 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.5
+
+- Hardened Explorer SendTo and right-click sends with single-instance command
+  forwarding, multi-select `%*` registry verbs, and queued file/folder sends.
+- Made app-window drops send to phone Downloads by default.
+- Turned Internet transfer into a direct online/VPN/tunnel address connect
+  prompt.
+- Added automated UI coverage for queued startup sends and the command bridge.
+
 ## Shipped In 0.7.4
 
 - Added Android share-sheet intake and automatic desktop download to Windows

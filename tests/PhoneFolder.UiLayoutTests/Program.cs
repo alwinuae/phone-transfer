@@ -28,6 +28,8 @@ internal static class Program
             ValidateFolderWindow(renderDirectory);
             ValidateCompactTables();
             ValidateProgressBar();
+            ValidateMainCommandFlows();
+            ValidateCommandBridge();
             WindowLifecycleTests.Run(application);
 
             Console.WriteLine("PASS: WPF dark-theme layout, command-state, and window-lifecycle checks.");
@@ -255,6 +257,109 @@ internal static class Program
             && labelOrigin.Y + label.ActualHeight <= progress.ActualHeight + 0.1,
             "Progress percentage extends outside the bar.");
         Assert(label.Text == "42%", "Progress percentage text is not rendered by the bar template.");
+    }
+
+    private static void ValidateMainCommandFlows()
+    {
+        using var scope = new WindowScope(new MainWindow());
+        var quickAction = Require<Button>(scope.Window, "QuickActionButton");
+        var quickHeaders = quickAction.ContextMenu?.Items
+            .OfType<MenuItem>()
+            .Select(item => item.Header?.ToString())
+            .Where(header => !string.IsNullOrWhiteSpace(header))
+            .ToArray()
+            ?? [];
+        Assert(
+            quickHeaders.Contains("Send PC files to phone Downloads..."),
+            "Quick action menu does not expose file send to phone Downloads.");
+        Assert(
+            quickHeaders.Contains("Send PC folder to phone Downloads..."),
+            "Quick action menu does not expose folder send to phone Downloads.");
+        Assert(
+            quickHeaders.Contains("Download selected to PC Downloads"),
+            "Quick action menu does not expose download to PC Downloads.");
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"PhoneTransferUi-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var filePath = Path.Combine(tempRoot, "send-file.txt");
+            var folderPath = Path.Combine(tempRoot, "send-folder");
+            File.WriteAllText(filePath, "send test");
+            Directory.CreateDirectory(folderPath);
+
+            var mainWindow = (MainWindow)scope.Window;
+            mainWindow.HandleStartupArgs([
+                "--send-to-phone",
+                "--mode",
+                "online",
+                filePath,
+                folderPath
+            ]);
+
+            var pendingPaths = (List<string>)typeof(MainWindow)
+                .GetField(
+                    "_pendingSendToPhonePaths",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(mainWindow)!;
+            var pendingMode = (string)typeof(MainWindow)
+                .GetField(
+                    "_pendingSendMode",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(mainWindow)!;
+            var status = Require<TextBlock>(scope.Window, "OperationStatusText").Text;
+            Assert(pendingPaths.Count == 2, "Startup send-to-phone did not queue both file and folder.");
+            Assert(pendingMode == "online", "Startup send-to-phone did not preserve online mode.");
+            Assert(
+                status.Contains("phone Downloads", StringComparison.OrdinalIgnoreCase),
+                "Startup send-to-phone status does not tell the user where items will go.");
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    private static void ValidateCommandBridge()
+    {
+        var previousScope = Environment.GetEnvironmentVariable("PHONEFOLDER_INSTANCE_SCOPE");
+        Environment.SetEnvironmentVariable("PHONEFOLDER_INSTANCE_SCOPE", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var received = new TaskCompletionSource<IReadOnlyList<string>>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            Assert(
+                AppCommandBridge.TryCreatePrimary(
+                    args => received.TrySetResult(args.ToArray()),
+                    out var bridge),
+                "The app command bridge did not create a primary instance.");
+            using (bridge!)
+            {
+                Assert(
+                    !AppCommandBridge.TryCreatePrimary(_ => { }, out var secondBridge),
+                    "The app command bridge allowed a second primary instance.");
+                secondBridge?.Dispose();
+
+                var sent = AppCommandBridge.TrySendAsync(
+                        ["--send-to-phone", @"C:\Temp\sample.txt"],
+                        TimeSpan.FromSeconds(3))
+                    .GetAwaiter()
+                    .GetResult();
+                Assert(sent, "The app command bridge did not accept forwarded arguments.");
+                Assert(
+                    received.Task.Wait(TimeSpan.FromSeconds(3)),
+                    "The app command bridge did not deliver forwarded arguments.");
+
+                var args = received.Task.Result;
+                Assert(
+                    args.SequenceEqual(["--send-to-phone", @"C:\Temp\sample.txt"]),
+                    "The app command bridge changed forwarded arguments.");
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PHONEFOLDER_INSTANCE_SCOPE", previousScope);
+        }
     }
 
     private static double AssertToolbarLayout(

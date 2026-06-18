@@ -31,6 +31,32 @@ cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
 
+## 0.7.5 Verification Summary
+
+Automated validation completed for the Windows command/send fixes and release
+artifacts:
+
+- `dotnet build PhoneFolder.slnx` completed with zero warnings and zero
+  errors after the 0.7.5 version bump.
+- `dotnet run --project tests\PhoneFolder.UiLayoutTests\PhoneFolder.UiLayoutTests.csproj`
+  passed. The test now covers queued startup `--send-to-phone` file/folder
+  sends, the single-instance command bridge, grouped Quick action entries, and
+  dark WPF layout/resource loading.
+- `dotnet run --project tests\PhoneFolder.NetworkTests\PhoneFolder.NetworkTests.csproj`
+  passed.
+- `powershell -ExecutionPolicy Bypass -File tests\Validate-ReleasePackaging.ps1`
+  passed and now checks that Explorer right-click verbs use multi-select
+  `%*` forwarding instead of single-path `%1` forwarding.
+- Android `assembleDebug`, `lintDebug`, and `testDebugUnitTest` completed
+  successfully from the Android Gradle root.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-release.ps1 -Version 0.7.5`
+  produced `Phone-Transfer-Windows-Setup-v0.7.5.exe` and
+  `Phone-Transfer-Android-v0.7.5.apk`.
+- `powershell -ExecutionPolicy Bypass -File tests\Validate-ReleasePackaging.ps1 -RequireBuiltArtifacts -Version 0.7.5`
+  passed against the generated release artifacts and checksums.
+- Live phone/emulator E2E could not be driven in this environment because
+  `adb` is not installed (`adb devices` is not recognized).
+
 ## 0.7.4 Verification Summary
 
 - The full .NET solution builds with zero warnings and zero errors.

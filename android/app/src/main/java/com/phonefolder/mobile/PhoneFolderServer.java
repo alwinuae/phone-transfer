@@ -197,7 +197,7 @@ final class PhoneFolderServer implements Closeable {
         if ("/api/v1/info".equals(path) && "GET".equals(request.method)) {
             String json = "{"
                     + "\"name\":\"" + JsonUtil.escape(deviceName) + "\","
-                    + "\"version\":\"0.7.3\","
+                    + "\"version\":\"0.7.5\","
                     + "\"protocolVersion\":1,"
                     + "\"port\":" + HTTP_PORT + ","
                     + "\"transport\":\"https\","

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:models="clr-namespace:PhoneFolder.Desktop.Models"
         Title="Phone Transfer"
-        Icon="Assets/PhoneTransfer.ico"
+        Icon="/PhoneTransfer;component/Assets/PhoneTransfer.ico"
         Style="{StaticResource {x:Type Window}}"
         Width="1380"
         Height="860"
@@ -47,7 +47,7 @@
                         <Image Width="62"
                                Height="62"
                                Margin="0,0,12,0"
-                               Source="Assets/PhoneTransfer.png"/>
+                               Source="/PhoneTransfer;component/Assets/PhoneTransfer.png"/>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock FontSize="26" FontWeight="Bold" Text="Phone Transfer"/>
                             <TextBlock Margin="0,3,0,0"
@@ -81,7 +81,7 @@
                             <Image Width="24"
                                    Height="24"
                                    VerticalAlignment="Top"
-                                   Source="Assets/PhoneTransfer.png"/>
+                                   Source="/PhoneTransfer;component/Assets/PhoneTransfer.png"/>
                             <StackPanel Grid.Column="1"
                                         Margin="9,0,0,0">
                                 <TextBlock x:Name="ConnectionStatusText"
@@ -172,7 +172,7 @@
                                                TextWrapping="Wrap"/>
                                     <Button x:Name="InternetTransferButton"
                                             Click="InternetTransferButton_Click"
-                                            Content="Use online address"/>
+                                            Content="Connect online address"/>
                                 </StackPanel>
                             </Border>
 
@@ -285,6 +285,8 @@
                                     <ContextMenu>
                                         <MenuItem Click="SendToPhoneDownloads_Click"
                                                   Header="Send PC files to phone Downloads..."/>
+                                        <MenuItem Click="SendFolderToPhoneDownloads_Click"
+                                                  Header="Send PC folder to phone Downloads..."/>
                                         <MenuItem Click="DownloadToPcDownloads_Click"
                                                   Header="Download selected to PC Downloads"/>
                                         <Separator/>
@@ -669,7 +671,7 @@
                             <TextBlock FontSize="18"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource AccentBrush}"
-                                       Text="Drop files or folders to copy them here"/>
+                                       Text="Drop files or folders to send to phone Downloads"/>
                         </Border>
                     </Grid>
                 </Grid>

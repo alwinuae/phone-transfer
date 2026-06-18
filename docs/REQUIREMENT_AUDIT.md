@@ -1,6 +1,6 @@
 # Phone Transfer User Requirement Audit
 
-This checklist maps the user's delivered requests through version 0.7.4. It covers
+This checklist maps the user's delivered requests through version 0.7.5. It covers
 the implementation requests made during development, not the optional future
 ideas retained in `PRODUCT_REQUIREMENTS.md` and `ROADMAP.md`.
 
