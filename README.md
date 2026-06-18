@@ -6,14 +6,26 @@ Windows Mobile Hotspot. File contents stay on the local network.
 
 ## Version 0.7.4
 
-Version 0.7.4 fixes the custom Windows caption controls and replaces
-horizontal command scrolling with responsive single-row button sizing. It
-also includes the complete edge-to-edge charcoal theme, clean top command
-strip, and multiple phone-folder tabs introduced in 0.7.3.
+Version 0.7.4 adds faster send-to-phone and phone-to-PC share workflows while
+keeping the custom Windows caption fixes, responsive single-row toolbars, and
+edge-to-edge charcoal theme.
 
 - Sleek Notepad++-inspired dark desktop theme with dark Windows title bars.
 - Working minimize, maximize, restore, and close controls on every form.
 - Responsive fixed-height toolbars shrink cleanly without scrolling or overlap.
+- Grouped Upload, Select, and Quick action dropdowns keep related commands
+  together.
+- Quick actions can send PC files to phone Downloads or download selected
+  phone items to Windows Downloads.
+- Android share-sheet support queues shared files/text for automatic download
+  to the connected laptop.
+- Windows right-click and SendTo entries send files or folders to the phone
+  over Wi-Fi or an online/VPN/tunnel address.
+- Dropping files onto the app can send them directly to phone Downloads.
+- Clickable breadcrumbs and `Ctrl+Tab` make open folders easier to navigate.
+- `Ctrl+X` now visibly marks files and folders waiting to be pasted.
+- Duplicate upload and new-folder name conflicts keep both items with
+  numbered names.
 - Subtle hover animation on command and title-bar buttons.
 - Main and independent folder windows support Details, List, Tiles, and small,
   medium, or large icon views.

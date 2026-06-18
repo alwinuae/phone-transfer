@@ -52,6 +52,28 @@ Source: "{#SourceExe}"; DestDir: "{app}"; DestName: "PhoneTransfer.exe"; Flags: 
 [Icons]
 Name: "{group}\Phone Transfer"; Filename: "{app}\PhoneTransfer.exe"
 Name: "{autodesktop}\Phone Transfer"; Filename: "{app}\PhoneTransfer.exe"; Tasks: desktopicon
+Name: "{userappdata}\Microsoft\Windows\SendTo\Phone Transfer (Wi-Fi)"; Filename: "{app}\PhoneTransfer.exe"; Parameters: "--send-to-phone --mode wifi"
+Name: "{userappdata}\Microsoft\Windows\SendTo\Phone Transfer (Online)"; Filename: "{app}\PhoneTransfer.exe"; Parameters: "--send-to-phone --mode online"
+
+[Registry]
+Root: HKCU; Subkey: "Software\Classes\*\shell\PhoneTransferSendWifi"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Send to Phone Transfer (Wi-Fi)"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\*\shell\PhoneTransferSendWifi"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\PhoneTransfer.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\*\shell\PhoneTransferSendWifi\command"; ValueType: string; ValueName: ""; ValueData: """{app}\PhoneTransfer.exe"" --send-to-phone --mode wifi ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\PhoneTransferSendWifi"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Send to Phone Transfer (Wi-Fi)"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\PhoneTransferSendWifi"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\PhoneTransfer.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\PhoneTransferSendWifi\command"; ValueType: string; ValueName: ""; ValueData: """{app}\PhoneTransfer.exe"" --send-to-phone --mode wifi ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\PhoneTransferSendWifi"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Send to Phone Transfer (Wi-Fi)"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\PhoneTransferSendWifi"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\PhoneTransfer.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\PhoneTransferSendWifi\command"; ValueType: string; ValueName: ""; ValueData: """{app}\PhoneTransfer.exe"" --send-to-phone --mode wifi ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\*\shell\PhoneTransferSendOnline"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Send to Phone Transfer (Online)"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\*\shell\PhoneTransferSendOnline"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\PhoneTransfer.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\*\shell\PhoneTransferSendOnline\command"; ValueType: string; ValueName: ""; ValueData: """{app}\PhoneTransfer.exe"" --send-to-phone --mode online ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\PhoneTransferSendOnline"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Send to Phone Transfer (Online)"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\PhoneTransferSendOnline"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\PhoneTransfer.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\PhoneTransferSendOnline\command"; ValueType: string; ValueName: ""; ValueData: """{app}\PhoneTransfer.exe"" --send-to-phone --mode online ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\PhoneTransferSendOnline"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Send to Phone Transfer (Online)"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\PhoneTransferSendOnline"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\PhoneTransfer.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\PhoneTransferSendOnline\command"; ValueType: string; ValueName: ""; ValueData: """{app}\PhoneTransfer.exe"" --send-to-phone --mode online ""%1"""; Flags: uninsdeletekey
 
 [Run]
 Filename: "{app}\PhoneTransfer.exe"; Description: "Launch Phone Transfer"; Flags: nowait postinstall skipifsilent

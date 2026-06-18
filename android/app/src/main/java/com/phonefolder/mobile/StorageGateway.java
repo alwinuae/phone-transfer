@@ -130,12 +130,12 @@ final class StorageGateway implements StorageBackend {
     public StorageBackend.Item upload(
             String parentId, String name, InputStream input, long length) throws Exception {
         requireValidName(name);
-        Uri parent = requireUri(parentId);
+        String destinationName = KeepBothNameResolver.resolve(
+                name,
+                false,
+                children(parentId));
         String mimeType = mimeType(name);
-        Uri created = DocumentsContract.createDocument(resolver, parent, mimeType, name);
-        if (created == null) {
-            throw new IllegalStateException("The folder did not allow this file to be created.");
-        }
+        Uri created = createDocumentExact(parentId, mimeType, destinationName);
 
         boolean completed = false;
         try (ParcelFileDescriptor descriptor = resolver.openFileDescriptor(created, "w")) {
@@ -163,14 +163,14 @@ final class StorageGateway implements StorageBackend {
 
     public StorageBackend.Item createFolder(String parentId, String name) throws Exception {
         requireValidName(name);
-        Uri created = DocumentsContract.createDocument(
-                resolver,
-                requireUri(parentId),
+        String destinationName = KeepBothNameResolver.resolve(
+                name,
+                true,
+                children(parentId));
+        Uri created = createDocumentExact(
+                parentId,
                 DocumentsContract.Document.MIME_TYPE_DIR,
-                name);
-        if (created == null) {
-            throw new IllegalStateException("The folder could not be created.");
-        }
+                destinationName);
         String itemId = remember(created, parentId);
         return metadata(itemId, created);
     }

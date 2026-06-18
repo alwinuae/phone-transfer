@@ -1,7 +1,8 @@
 # Phone Transfer 0.7.4
 
-Phone Transfer 0.7.4 is a Windows reliability and responsive-layout release
-focused on working window controls and fast access to every command.
+Phone Transfer 0.7.4 is a transfer-workflow and Windows polish release
+focused on faster send-to-phone actions, phone-to-PC sharing, and cleaner
+navigation.
 
 ## New And Improved
 
@@ -16,11 +17,29 @@ focused on working window controls and fast access to every command.
   new tab, switch between locations, and retain each tab's path and back
   history.
 - Added `Ctrl+T` to open a folder tab and `Ctrl+W` to close the active tab.
+- Added `Ctrl+Tab` and `Ctrl+Shift+Tab` to cycle open phone-folder tabs.
+- Added clickable breadcrumb navigation for direct jumps to parent folders.
+- Added grouped Upload, Select, and Quick action dropdowns, including
+  one-click download to PC Downloads and send to phone Downloads.
+- Added Select all and Unselect all commands.
+- Added visible cut-state styling after `Ctrl+X`.
+- Added Android share-sheet support. Shared phone files/text queue in Phone
+  Transfer and auto-download to the connected Windows Downloads folder.
+- Added Windows SendTo and right-click entries for sending files/folders to
+  the phone over Wi-Fi or an online/VPN/tunnel address.
+- Added app-level drag/drop to send PC files to the phone Downloads folder.
+- Added a dedicated Internet transfer setup option for reachable online,
+  VPN, or tunnel addresses.
+- Moved connected-phone details higher in the left pane and added a compact
+  phone/app icon so connection text remains readable.
 - Converted navigation and file-action toolbars to responsive single-row
   layouts. Buttons and labels scale down at compact widths instead of
   wrapping, overlapping, or introducing horizontal scrolling.
+- Fixed duplicate-name upload and folder-create conflicts by keeping both
+  items with Explorer-style numbered names.
 - Fixed minimize, maximize, restore, and close actions across every custom
   dark title bar.
+- Fixed the light flash/focus surface that could appear while switching tabs.
 - Added subtle hover animation to normal, toolbar, and title-bar buttons.
 - Kept the existing compact table rows, sorting, view modes, drag and drop,
   multi-selection, thumbnails, streaming, concurrent transfers, storage

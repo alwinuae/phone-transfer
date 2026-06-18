@@ -2,6 +2,17 @@
 
 ## Shipped In 0.7.4
 
+- Added Android share-sheet intake and automatic desktop download to Windows
+  Downloads for shared phone items.
+- Added Windows SendTo/right-click Wi-Fi and Online send-to-phone entries.
+- Added quick actions for phone Downloads and PC Downloads transfers.
+- Added app-level drag/drop to phone Downloads.
+- Added clickable breadcrumbs, `Ctrl+Tab` tab switching, Select/Unselect all,
+  and visible cut-state styling.
+- Fixed duplicate upload and folder-create name conflicts with keep-both names.
+- Moved connected-phone details higher in the left pane with a compact icon.
+- Added an Internet transfer setup path for reachable online, VPN, or tunnel
+  addresses.
 - Fixed minimize, maximize, restore, and close across every custom dark form.
 - Replaced horizontal command scrolling with responsive single-row buttons
   that scale down with the window and expand again when space returns.

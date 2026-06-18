@@ -137,11 +137,57 @@ public sealed class RemoteClient : IDisposable
         return await ReadAsync<List<RemoteItem>>(response, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<RemoteItem>> GetSharedInboxAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.GetAsync("inbox", cancellationToken);
+        return await ReadAsync<List<RemoteItem>>(response, cancellationToken);
+    }
+
+    public async Task DownloadSharedInboxItemAsync(
+        RemoteItem item,
+        string destinationPath,
+        Action<double> progress,
+        CancellationToken cancellationToken = default)
+    {
+        await DownloadContentAsync(
+            $"inbox/{Uri.EscapeDataString(item.Id)}/content",
+            item,
+            destinationPath,
+            progress,
+            cancellationToken);
+    }
+
+    public async Task DeleteSharedInboxItemAsync(
+        string itemId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.DeleteAsync(
+            $"inbox/{Uri.EscapeDataString(itemId)}",
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task DownloadAsync(
         RemoteItem item,
         string destinationPath,
         Action<double> progress,
         CancellationToken cancellationToken = default)
+    {
+        await DownloadContentAsync(
+            $"items/{Uri.EscapeDataString(item.Id)}/content",
+            item,
+            destinationPath,
+            progress,
+            cancellationToken);
+    }
+
+    private async Task DownloadContentAsync(
+        string requestUri,
+        RemoteItem item,
+        string destinationPath,
+        Action<double> progress,
+        CancellationToken cancellationToken)
     {
         var temporaryPath = destinationPath + ".phonefolder-part";
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
@@ -154,7 +200,7 @@ public sealed class RemoteClient : IDisposable
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"items/{Uri.EscapeDataString(item.Id)}/content");
+            requestUri);
         if (existingLength > 0)
         {
             request.Headers.Range = new RangeHeaderValue(existingLength, null);

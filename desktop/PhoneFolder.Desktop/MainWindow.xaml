@@ -10,19 +10,22 @@
         MinWidth="1040"
         MinHeight="680"
         Background="{StaticResource WindowBrush}"
+        AllowDrop="True"
+        DragOver="Window_DragOver"
+        Drop="Window_Drop"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown"
         WindowStartupLocation="CenterScreen">
-    <Grid Margin="18">
+    <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="ConnectionColumn" Width="330"/>
-            <ColumnDefinition x:Name="ConnectionToggleColumn" Width="38"/>
+            <ColumnDefinition x:Name="ConnectionColumn" Width="318"/>
+            <ColumnDefinition x:Name="ConnectionToggleColumn" Width="34"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border x:Name="ConnectionPane"
                 Grid.Column="0"
-                Padding="22"
+                Padding="16"
                 Background="{StaticResource PanelBrush}"
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
@@ -37,7 +40,7 @@
                 </Grid.RowDefinitions>
 
                 <ScrollViewer Grid.Row="0"
-                              Grid.RowSpan="4"
+                              Grid.RowSpan="5"
                               VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="0,0,6,0">
                     <StackPanel Margin="0,0,0,22" Orientation="Horizontal">
@@ -63,6 +66,44 @@
                             Click="SwitchDeviceButton_Click"
                             Content="Connect trusted phone"
                             Style="{StaticResource PrimaryButton}"/>
+
+                    <Border Margin="0,0,0,12"
+                            Padding="12"
+                            Background="{StaticResource PanelRaisedBrush}"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="9">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Top"
+                                   Source="Assets/PhoneTransfer.png"/>
+                            <StackPanel Grid.Column="1"
+                                        Margin="9,0,0,0">
+                                <TextBlock x:Name="ConnectionStatusText"
+                                           FontWeight="SemiBold"
+                                           Text="Not connected"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="DeviceDetailsText"
+                                           Margin="0,4,0,0"
+                                           Foreground="{StaticResource MutedBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="StorageStatusText"
+                                           Margin="0,10,0,5"
+                                           Foreground="{StaticResource MutedBrush}"
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed"/>
+                                <ProgressBar x:Name="StorageUsageBar"
+                                             Height="18"
+                                             Maximum="100"
+                                             Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
 
                     <Expander x:Name="SetupExpander"
                               Margin="0,4,0,0"
@@ -117,6 +158,24 @@
                                 </StackPanel>
                             </Border>
 
+                            <Border Margin="0,0,0,12"
+                                    Padding="12"
+                                    Background="{StaticResource PanelRaisedBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="9">
+                                <StackPanel>
+                                    <TextBlock FontWeight="Bold" Text="Internet transfer"/>
+                                    <TextBlock Margin="0,3,0,9"
+                                               Foreground="{StaticResource MutedBrush}"
+                                               Text="Use a reachable VPN, tunnel, or public HTTPS address for transfers away from home."
+                                               TextWrapping="Wrap"/>
+                                    <Button x:Name="InternetTransferButton"
+                                            Click="InternetTransferButton_Click"
+                                            Content="Use online address"/>
+                                </StackPanel>
+                            </Border>
+
                             <Expander Header="Manual address">
                                 <StackPanel Margin="0,10,0,0">
                                     <TextBlock Margin="0,0,0,6"
@@ -158,24 +217,6 @@
                 </StackPanel>
                 </ScrollViewer>
 
-                <StackPanel Grid.Row="4">
-                    <TextBlock x:Name="ConnectionStatusText"
-                               Margin="0,16,0,4"
-                               FontWeight="SemiBold"
-                               Text="Not connected"/>
-                    <TextBlock x:Name="DeviceDetailsText"
-                               Foreground="{StaticResource MutedBrush}"
-                               TextWrapping="Wrap"/>
-                    <TextBlock x:Name="StorageStatusText"
-                               Margin="0,12,0,5"
-                               Foreground="{StaticResource MutedBrush}"
-                               TextWrapping="Wrap"
-                               Visibility="Collapsed"/>
-                    <ProgressBar x:Name="StorageUsageBar"
-                                 Height="18"
-                                 Maximum="100"
-                                 Visibility="Collapsed"/>
-                </StackPanel>
             </Grid>
         </Border>
 
@@ -221,16 +262,50 @@
                                     Click="OpenMediaButton_Click"
                                     Content="Open"
                                     ToolTip="Open the selected file (Enter)"/>
-                            <Button Click="UploadButton_Click"
-                                    Content="Upload files"
-                                    ToolTip="Upload files from this PC"/>
-                            <Button Click="UploadFolderButton_Click"
-                                    Content="Upload folder"
-                                    ToolTip="Upload a folder from this PC"/>
+                            <Button x:Name="UploadActionsButton"
+                                    Click="UploadActionsButton_Click"
+                                    Content="Upload"
+                                    ToolTip="Upload files or folders from this PC">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="UploadButton_Click" Header="Upload files"/>
+                                        <MenuItem Click="UploadFolderButton_Click" Header="Upload folder"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
                             <Button x:Name="DownloadButton"
                                     Click="DownloadButton_Click"
                                     Content="Download"
                                     ToolTip="Download selected items"/>
+                            <Button x:Name="QuickActionButton"
+                                    Click="QuickActionButton_Click"
+                                    Content="Quick action"
+                                    ToolTip="Common one-click transfer actions">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="SendToPhoneDownloads_Click"
+                                                  Header="Send PC files to phone Downloads..."/>
+                                        <MenuItem Click="DownloadToPcDownloads_Click"
+                                                  Header="Download selected to PC Downloads"/>
+                                        <Separator/>
+                                        <MenuItem Click="InternetTransferButton_Click"
+                                                  Header="Use online address"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                            <Button x:Name="SelectActionsButton"
+                                    Click="SelectActionsButton_Click"
+                                    Content="Select"
+                                    ToolTip="Select or clear the visible folder items">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="SelectAllButton_Click"
+                                                  Header="Select all"/>
+                                        <MenuItem Click="ClearSelectionButton_Click"
+                                                  Header="Unselect all"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
                             <Button Click="NewFolderButton_Click"
                                     Content="New folder"
                                     ToolTip="Create a folder"/>

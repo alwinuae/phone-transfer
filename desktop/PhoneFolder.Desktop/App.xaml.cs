@@ -42,6 +42,10 @@ public partial class App : Application
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnLastWindowClose;
         WindowCoordinator.Instance.Initialize(this);
+        var mainWindow = new MainWindow();
+        MainWindow = mainWindow;
+        mainWindow.Show();
+        mainWindow.HandleStartupArgs(e.Args);
     }
 
     protected override async void OnExit(ExitEventArgs e)

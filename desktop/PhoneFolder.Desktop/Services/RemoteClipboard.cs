@@ -9,6 +9,7 @@ public static class RemoteClipboard
     private static string _deviceName = string.Empty;
 
     public static IReadOnlyList<RemoteItem> Items => _items;
+    public static string ConnectionKey => _connectionKey;
     public static bool IsCut { get; private set; }
     public static bool HasItems => _items.Count > 0;
     public static event EventHandler? Changed;
