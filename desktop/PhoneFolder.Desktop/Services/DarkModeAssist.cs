@@ -22,6 +22,23 @@ public static class DarkModeAssist
     public static bool GetEnabled(DependencyObject element) =>
         (bool)element.GetValue(EnabledProperty);
 
+    /// <summary>
+    /// Windows that always render dark content regardless of the app theme (e.g. the
+    /// media viewer) set this so their title bar stays dark even in Light/System mode.
+    /// </summary>
+    public static readonly DependencyProperty ForceDarkProperty =
+        DependencyProperty.RegisterAttached(
+            "ForceDark",
+            typeof(bool),
+            typeof(DarkModeAssist),
+            new PropertyMetadata(false));
+
+    public static void SetForceDark(DependencyObject element, bool value) =>
+        element.SetValue(ForceDarkProperty, value);
+
+    public static bool GetForceDark(DependencyObject element) =>
+        (bool)element.GetValue(ForceDarkProperty);
+
     private static void EnabledChanged(
         DependencyObject dependencyObject,
         DependencyPropertyChangedEventArgs args)
@@ -40,13 +57,21 @@ public static class DarkModeAssist
 
     private static void Window_SourceInitialized(object? sender, EventArgs e)
     {
-        if (sender is not Window window)
+        if (sender is Window window)
+        {
+            Apply(window, GetForceDark(window) || ThemeService.CurrentIsDark);
+        }
+    }
+
+    public static void Apply(Window window, bool isDark)
+    {
+        var handle = new WindowInteropHelper(window).Handle;
+        if (handle == IntPtr.Zero)
         {
             return;
         }
 
-        var handle = new WindowInteropHelper(window).Handle;
-        var enabled = 1;
+        var enabled = isDark ? 1 : 0;
         if (DwmSetWindowAttribute(
                 handle,
                 DwmUseImmersiveDarkMode,

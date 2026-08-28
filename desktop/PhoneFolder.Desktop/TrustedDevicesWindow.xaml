@@ -18,7 +18,7 @@
         <StackPanel>
             <TextBlock FontSize="24" FontWeight="Bold" Text="Trusted phones"/>
             <TextBlock Margin="0,5,0,14"
-                       Foreground="{StaticResource MutedBrush}"
+                       Foreground="{DynamicResource MutedBrush}"
                        Text="These phones can reconnect without entering the current Android access code."/>
         </StackPanel>
         <DataGrid x:Name="ProfilesGrid"

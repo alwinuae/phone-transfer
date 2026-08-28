@@ -56,6 +56,8 @@ public partial class App : Application
             return;
         }
 
+        ThemeService.Apply(AppSettingsStore.Load().Theme);
+
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
         mainWindow.Show();

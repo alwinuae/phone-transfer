@@ -4,6 +4,23 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
+## Version 0.7.6
+
+Version 0.7.6 fixes stale connection/storage status after the phone drops
+off, adds transfer timestamps and quick open/reveal actions, shows how the
+phone is connected, and adds a Dark/Light/system theme setting.
+
+- The left connection pane now detects a lost connection and updates within
+  seconds instead of continuing to show a stale "Connected" state; phone
+  storage usage refreshes automatically while connected.
+- The left connection pane shows how the current phone is connected (router
+  Wi-Fi, PC hotspot, manual address, or online address).
+- The Transfers window shows when each item was sent, using your Windows
+  regional date/time format, plus Open and Show in folder buttons per row.
+- Setup now has a Theme option: Dark, Light, or match the Windows setting.
+- Added a GitHub Actions release workflow that builds and publishes the
+  Windows installer and Android APK automatically on a version tag.
+
 ## Version 0.7.5
 
 Version 0.7.5 fixes the Windows send-to-phone cycles and keeps the 0.7.4
@@ -118,10 +135,19 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-Setup-v0.7.5.exe
-artifacts/release/Phone-Transfer-Android-v0.7.5.apk
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.6.exe
+artifacts/release/Phone-Transfer-Android-v0.7.6.apk
 artifacts/release/SHA256SUMS.txt
 ```
+
+Pushing a `v*` tag also runs `.github/workflows/release.yml`, which builds
+both artifacts on a `windows-latest` runner and publishes them to the
+matching GitHub Release. It signs the Android APK with the keystore in the
+`ANDROID_KEYSTORE_BASE64`/`ANDROID_KEYSTORE_PASSWORD` repository secrets; if
+those secrets are not set yet, the workflow generates a new keystore, uploads
+it as a workflow artifact for you to save, and future runs will keep
+generating a new one until you add it as secrets (do this once, or every
+release invalidates the previous APK as an update target).
 
 ## Verification
 

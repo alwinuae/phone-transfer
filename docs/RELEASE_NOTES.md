@@ -1,10 +1,38 @@
-# Phone Transfer 0.7.5
+# Phone Transfer 0.7.6
+
+Phone Transfer 0.7.6 fixes the left connection pane going stale after the
+phone disconnects, adds transfer timestamps and quick open/reveal actions,
+surfaces the current connection method, and adds a Dark/Light/System theme
+setting. It also adds an automated release build.
+
+## New And Improved
+
+- Fixed the left connection pane continuing to show "Connected" and stale
+  storage numbers after the phone stopped responding. The app now checks the
+  connection in the background and updates status and storage automatically.
+- Added a connection-method line under the connection status (router Wi-Fi,
+  PC hotspot, manual address, or online address).
+- Added a Sent column to the Transfers window using your Windows regional
+  date/time format, plus per-row Open and Show in folder buttons once a
+  transfer finishes.
+- Added a Theme setting (Dark, Light, or match Windows) under Setup.
+- Added `.github/workflows/release.yml` to build and publish the Windows
+  installer and Android APK automatically from a pushed version tag.
+
+## Signing Key Change
+
+This release uses a new Android signing keystore (the previous one was not
+recoverable). Devices with v0.7.5 or earlier installed must uninstall the old
+app before installing this APK - Android blocks installing an update signed
+with a different key. Future releases will keep using this new key.
+
+## Previous: Phone Transfer 0.7.5
 
 Phone Transfer 0.7.5 is a reliability release for the Windows send-to-phone
 and online-transfer cycles. It keeps the 0.7.4 workflow polish and fixes the
 paths that could appear in the UI but fail during real use.
 
-## New And Improved
+### New And Improved
 
 - Added a single-instance command bridge so Explorer SendTo/right-click
   invocations forward into the already-open app instead of opening disconnected
@@ -59,9 +87,11 @@ paths that could appear in the UI but fail during real use.
 
 ## Installation
 
-1. Install `Phone-Transfer-Android-v0.7.5.apk`.
-2. Install `Phone-Transfer-Windows-Setup-v0.7.5.exe`.
-3. Start sharing on Android, then connect through router Wi-Fi or Windows
+1. If a v0.7.5 or earlier build of the Android app is installed, uninstall it
+   first (see Signing Key Change above).
+2. Install `Phone-Transfer-Android-v0.7.6.apk`.
+3. Install `Phone-Transfer-Windows-Setup-v0.7.6.exe`.
+4. Start sharing on Android, then connect through router Wi-Fi or Windows
    Mobile Hotspot. Existing trusted-device profiles remain compatible.
 
 The Windows Setup EXE is not Authenticode-signed. Do not submit the unsigned

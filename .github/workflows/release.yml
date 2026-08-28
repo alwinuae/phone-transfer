@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g. 0.7.6). Required for manual runs."
+        required: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}" -replace '^v', ''
+          }
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Could not resolve a version to build."
+          }
+          echo "value=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform and build-tools
+        shell: pwsh
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" | Out-Null
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Restore Android signing keystore from secrets
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path ".local-signing" -Force | Out-Null
+          [IO.File]::WriteAllBytes(
+            ".local-signing/phonefolder-release.jks",
+            [Convert]::FromBase64String("${{ secrets.ANDROID_KEYSTORE_BASE64 }}"))
+          Set-Content -LiteralPath ".local-signing/phonefolder-release.password" `
+            -Value "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -Encoding ASCII -NoNewline
+
+      - name: Build release artifacts
+        shell: pwsh
+        run: .\scripts\build-release.ps1 -Version "${{ steps.version.outputs.value }}"
+
+      - name: Upload generated keystore (first run only - no secret configured yet)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-signing-keystore-SAVE-THIS
+          path: |
+            .local-signing/phonefolder-release.jks
+            .local-signing/phonefolder-release.password
+          retention-days: 14
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: Phone Transfer ${{ steps.version.outputs.value }}
+          files: |
+            artifacts/release/*.exe
+            artifacts/release/*.apk
+            artifacts/release/SHA256SUMS.txt
+            artifacts/release/RELEASE_NOTES.md

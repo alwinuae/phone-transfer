@@ -353,7 +353,8 @@ public partial class FolderWindow : Window
                         _ = RefreshAsync();
                     }
                 },
-                location: Current.Name);
+                location: Current.Name,
+                localPath: path);
         }
         ShowTransfers();
     }
@@ -385,7 +386,8 @@ public partial class FolderWindow : Window
                         (_, value, _) => progress(value),
                         cancellationToken);
                 },
-                location: dialog.FolderName);
+                location: dialog.FolderName,
+                localPath: Path.Combine(dialog.FolderName, item.Name));
         }
         ShowTransfers();
     }

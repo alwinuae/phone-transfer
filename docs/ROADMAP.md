@@ -1,5 +1,17 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.6
+
+- Background connection health check that detects a dropped phone and resets
+  the left connection pane instead of leaving it stale.
+- Automatic periodic phone-storage refresh while connected.
+- Connection-method indicator (router Wi-Fi, PC hotspot, manual, online) in
+  the left connection pane.
+- Sent-date/time column and per-row Open/Show in folder actions in the
+  Transfers window.
+- Dark/Light/System theme setting.
+- GitHub Actions release workflow for the Windows installer and Android APK.
+
 ## Shipped In 0.7.5
 
 - Hardened Explorer SendTo and right-click sends with single-instance command

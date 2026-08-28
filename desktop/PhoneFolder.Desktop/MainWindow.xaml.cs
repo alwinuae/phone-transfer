@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _thumbnailCancellation;
     private CancellationTokenSource? _shareInboxCancellation;
     private string _pendingSendMode = "wifi";
+    private ConnectionMethod _pendingConnectionMethod = ConnectionMethod.Manual;
     private GridLength _folderPaneWidth = new(220);
     private FileSortField _sortField = FileSortField.Name;
     private bool _sortDescending;
@@ -71,6 +72,7 @@ public partial class MainWindow : Window
     {
         if (_rememberedConnection is not null)
         {
+            _pendingConnectionMethod = _rememberedConnection.Method;
             await ConnectFromFieldsAsync(automatic: true);
         }
     }
@@ -276,6 +278,7 @@ public partial class MainWindow : Window
         }
 
         ApplyRememberedConnection(profile);
+        _pendingConnectionMethod = profile.Method;
         await ConnectFromFieldsAsync(automatic: false);
     }
 
@@ -302,11 +305,14 @@ public partial class MainWindow : Window
 
     private async void ConnectDiscoveredButton_Click(object sender, RoutedEventArgs e)
     {
-        if (DiscoveredDevicesCombo.SelectedItem is not DiscoveredDevice)
+        if (DiscoveredDevicesCombo.SelectedItem is not DiscoveredDevice selectedDevice)
         {
             ShowError("Find and select a phone on router Wi-Fi first.");
             return;
         }
+        _pendingConnectionMethod = selectedDevice.IsHotspot
+            ? ConnectionMethod.PcHotspot
+            : ConnectionMethod.RouterWifi;
         await ConnectFromFieldsAsync(automatic: false);
     }
 
@@ -382,6 +388,7 @@ public partial class MainWindow : Window
 
         if (selectedDevice is not null && !string.IsNullOrWhiteSpace(TokenTextBox.Text))
         {
+            _pendingConnectionMethod = ConnectionMethod.PcHotspot;
             await ConnectFromFieldsAsync(automatic: false);
         }
         else
@@ -413,6 +420,7 @@ public partial class MainWindow : Window
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
     {
+        _pendingConnectionMethod = ConnectionMethod.Manual;
         await ConnectFromFieldsAsync(automatic: false);
     }
 
@@ -490,6 +498,7 @@ public partial class MainWindow : Window
             HostTextBox.Text = endpoint.Host;
             PortTextBox.Text = endpoint.Port.ToString();
             ConnectionStatusText.Text = $"Connected to {info.Name}";
+            ConnectionMethodText.Text = DescribeConnectionMethod(_pendingConnectionMethod);
             DeviceDetailsText.Text = $"{HotspotService.ConnectionDescription(endpoint.Host)}"
                 + $" | HTTPS | Protocol {info.ProtocolVersion}\n"
                 + $"Certificate SHA-256:\n{FormatFingerprint(info.CertificateFingerprint)}";
@@ -529,7 +538,8 @@ public partial class MainWindow : Window
                         info.Name,
                         trustedToken,
                         clientId,
-                        DateTimeOffset.UtcNow);
+                        DateTimeOffset.UtcNow,
+                        Method: _pendingConnectionMethod);
                     ConnectionProfileStore.Save(_rememberedConnection);
                     RefreshTrustedDevices(_rememberedConnection);
                 }
@@ -648,7 +658,10 @@ public partial class MainWindow : Window
         throw new InvalidOperationException(initial.Message);
     }
 
-    private void DisconnectButton_Click(object sender, RoutedEventArgs e)
+    private void DisconnectButton_Click(object sender, RoutedEventArgs e) =>
+        HandleDisconnected("Ready");
+
+    private void HandleDisconnected(string reason)
     {
         _thumbnailCancellation?.Cancel();
         StopShareInboxWatcher();
@@ -661,11 +674,12 @@ public partial class MainWindow : Window
         _folderRoots.Clear();
         ResetBrowserTabs();
         ConnectionStatusText.Text = "Not connected";
+        ConnectionMethodText.Text = string.Empty;
         DeviceDetailsText.Text = string.Empty;
         StorageStatusText.Visibility = Visibility.Collapsed;
         StorageUsageBar.Visibility = Visibility.Collapsed;
         SetPathPlaceholder("Connect to a phone to browse files");
-        OperationStatusText.Text = "Ready";
+        OperationStatusText.Text = reason;
         UpdateActionState();
     }
 
@@ -840,6 +854,7 @@ public partial class MainWindow : Window
         }
 
         _pendingSendMode = "online";
+        _pendingConnectionMethod = ConnectionMethod.Internet;
         OperationStatusText.Text = "Connecting through the online address...";
         await ConnectFromFieldsAsync(automatic: false);
     }
@@ -1074,7 +1089,8 @@ public partial class MainWindow : Window
                         (_, value, _) => progress(value),
                         cancellationToken);
                 },
-                location: downloads);
+                location: downloads,
+                localPath: Path.Combine(downloads, item.Name));
         }
 
         ShowTransfersWindow();
@@ -1127,7 +1143,8 @@ public partial class MainWindow : Window
                     _ = RefreshFolderIfCurrentAsync(destinationId);
                     _ = RefreshStorageInfoAsync();
                 },
-                location: destinationName);
+                location: destinationName,
+                localPath: path);
         }
 
         ShowTransfersWindow();
@@ -1301,7 +1318,8 @@ public partial class MainWindow : Window
                         (_, value, _) => progress(value),
                         cancellationToken);
                 },
-                location: dialog.FolderName);
+                location: dialog.FolderName,
+                localPath: Path.Combine(dialog.FolderName, item.Name));
         }
 
         ShowTransfersWindow();
@@ -2273,11 +2291,14 @@ public partial class MainWindow : Window
 
     private async Task WatchShareInboxAsync(CancellationToken cancellationToken)
     {
+        var consecutiveFailures = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 await DownloadPendingPhoneSharesAsync(cancellationToken);
+                consecutiveFailures = 0;
+                await RefreshStorageInfoAsync();
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
             catch (OperationCanceledException)
@@ -2286,6 +2307,12 @@ public partial class MainWindow : Window
             }
             catch
             {
+                consecutiveFailures++;
+                if (consecutiveFailures >= 3)
+                {
+                    HandleDisconnected("The phone stopped responding. Reconnect when it's back online.");
+                    return;
+                }
                 await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             }
         }
@@ -2363,7 +2390,8 @@ public partial class MainWindow : Window
                     await Dispatcher.InvokeAsync(() => _queuedPhoneShareIds.Remove(item.Id));
                 }
             },
-            location: downloads);
+            location: downloads,
+            localPath: destination);
         return true;
     }
 
@@ -2512,6 +2540,14 @@ public partial class MainWindow : Window
                 .Select(index =>
                     normalized.Substring(index * 8, Math.Min(8, normalized.Length - index * 8))));
     }
+
+    private static string DescribeConnectionMethod(ConnectionMethod method) => method switch
+    {
+        ConnectionMethod.RouterWifi => "via router Wi-Fi",
+        ConnectionMethod.PcHotspot => "via PC hotspot",
+        ConnectionMethod.Internet => "via online address",
+        _ => "via manual address"
+    };
 
     private static string ReserveLocalPath(string directory, string name, bool isDirectory)
     {

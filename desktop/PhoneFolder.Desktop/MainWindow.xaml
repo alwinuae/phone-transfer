@@ -9,7 +9,7 @@
         Height="860"
         MinWidth="1040"
         MinHeight="680"
-        Background="{StaticResource WindowBrush}"
+        Background="{DynamicResource WindowBrush}"
         AllowDrop="True"
         DragOver="Window_DragOver"
         Drop="Window_Drop"
@@ -26,8 +26,8 @@
         <Border x:Name="ConnectionPane"
                 Grid.Column="0"
                 Padding="16"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="12">
             <Grid>
@@ -51,7 +51,7 @@
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock FontSize="26" FontWeight="Bold" Text="Phone Transfer"/>
                             <TextBlock Margin="0,3,0,0"
-                                       Foreground="{StaticResource MutedBrush}"
+                                       Foreground="{DynamicResource MutedBrush}"
                                        Text="Fast Android file transfer"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
@@ -69,8 +69,8 @@
 
                     <Border Margin="0,0,0,12"
                             Padding="12"
-                            Background="{StaticResource PanelRaisedBrush}"
-                            BorderBrush="{StaticResource BorderBrush}"
+                            Background="{DynamicResource PanelRaisedBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
                             CornerRadius="9">
                         <Grid>
@@ -88,13 +88,17 @@
                                            FontWeight="SemiBold"
                                            Text="Not connected"
                                            TextWrapping="Wrap"/>
+                                <TextBlock x:Name="ConnectionMethodText"
+                                           Margin="0,2,0,0"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           TextWrapping="Wrap"/>
                                 <TextBlock x:Name="DeviceDetailsText"
                                            Margin="0,4,0,0"
-                                           Foreground="{StaticResource MutedBrush}"
+                                           Foreground="{DynamicResource MutedBrush}"
                                            TextWrapping="Wrap"/>
                                 <TextBlock x:Name="StorageStatusText"
                                            Margin="0,10,0,5"
-                                           Foreground="{StaticResource MutedBrush}"
+                                           Foreground="{DynamicResource MutedBrush}"
                                            TextWrapping="Wrap"
                                            Visibility="Collapsed"/>
                                 <ProgressBar x:Name="StorageUsageBar"
@@ -111,14 +115,14 @@
                         <StackPanel Margin="0,12,0,0">
                             <Border Margin="0,0,0,12"
                                     Padding="12"
-                                    Background="{StaticResource PanelRaisedBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{DynamicResource PanelRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="9">
                                 <StackPanel>
                                     <TextBlock FontWeight="Bold" Text="Router Wi-Fi"/>
                                     <TextBlock Margin="0,3,0,9"
-                                               Foreground="{StaticResource MutedBrush}"
+                                               Foreground="{DynamicResource MutedBrush}"
                                                Text="Use when the PC and phone share the same Wi-Fi router."
                                                TextWrapping="Wrap"/>
                                     <Button x:Name="DiscoverButton"
@@ -138,14 +142,14 @@
 
                             <Border Margin="0,0,0,12"
                                     Padding="12"
-                                    Background="{StaticResource PanelRaisedBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{DynamicResource PanelRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="9">
                                 <StackPanel>
                                     <TextBlock FontWeight="Bold" Text="PC hotspot (direct Wi-Fi)"/>
                                     <TextBlock Margin="0,3,0,9"
-                                               Foreground="{StaticResource MutedBrush}"
+                                               Foreground="{DynamicResource MutedBrush}"
                                                Text="Connect the phone to Windows Mobile Hotspot for a direct local link."
                                                TextWrapping="Wrap"/>
                                     <Button x:Name="OpenHotspotSettingsButton"
@@ -160,14 +164,14 @@
 
                             <Border Margin="0,0,0,12"
                                     Padding="12"
-                                    Background="{StaticResource PanelRaisedBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{DynamicResource PanelRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="9">
                                 <StackPanel>
                                     <TextBlock FontWeight="Bold" Text="Internet transfer"/>
                                     <TextBlock Margin="0,3,0,9"
-                                               Foreground="{StaticResource MutedBrush}"
+                                               Foreground="{DynamicResource MutedBrush}"
                                                Text="Use a reachable VPN, tunnel, or public HTTPS address for transfers away from home."
                                                TextWrapping="Wrap"/>
                                     <Button x:Name="InternetTransferButton"
@@ -233,8 +237,8 @@
                 ToolTip="Collapse connection panel"/>
 
         <Border Grid.Column="2"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="16">
             <Grid>
@@ -248,8 +252,8 @@
 
                 <Border Grid.Row="0"
                         Padding="14,8,6,8"
-                        Background="{StaticResource TitleBarBrush}"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        Background="{DynamicResource TitleBarBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1">
                         <UniformGrid x:Name="FileActionsPanel"
                                      IsEnabled="False"
@@ -383,7 +387,7 @@
 
                 <Border Grid.Row="1"
                         Padding="14,10,6,6"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -447,8 +451,8 @@
 
                 <Border Grid.Row="2"
                         Padding="12,0,10,0"
-                        Background="{StaticResource WindowBrush}"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        Background="{DynamicResource WindowBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1">
                     <ListBox x:Name="FolderTabsList"
                              AutomationProperties.Name="Open phone folders"
@@ -506,7 +510,7 @@
                     <Border x:Name="FolderPane"
                             Grid.Column="0"
                             Padding="8"
-                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="0,0,1,0">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top"
@@ -514,7 +518,7 @@
                                        FontWeight="SemiBold"
                                        Text="Folders"/>
                             <TreeView x:Name="FolderTree"
-                                      Background="{StaticResource PanelBrush}"
+                                      Background="{DynamicResource PanelBrush}"
                                       ItemsSource="{Binding}"
                                       SelectedItemChanged="FolderTree_SelectedItemChanged"
                                       TreeViewItem.Expanded="FolderTreeItem_Expanded">
@@ -539,7 +543,7 @@
                                   Grid.Column="1"
                                   Width="6"
                                   HorizontalAlignment="Stretch"
-                                  Background="{StaticResource ControlBrush}"
+                                  Background="{DynamicResource ControlBrush}"
                                   ResizeBehavior="PreviousAndNext"
                                   ResizeDirection="Columns"
                                   ShowsPreview="True"/>
@@ -635,8 +639,8 @@
                                                   Click="ItemCheckBox_Click"
                                                   IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Name}"/>
-                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding TypeLabel}"/>
-                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding SizeLabel}"/>
+                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Text="{Binding TypeLabel}"/>
+                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Text="{Binding SizeLabel}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -662,15 +666,15 @@
                                 Padding="24"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Background="{StaticResource PanelRaisedBrush}"
-                                BorderBrush="{StaticResource AccentBrush}"
+                                Background="{DynamicResource PanelRaisedBrush}"
+                                BorderBrush="{DynamicResource AccentBrush}"
                                 BorderThickness="2"
                                 CornerRadius="12"
                                 IsHitTestVisible="False"
                                 Visibility="Collapsed">
                             <TextBlock FontSize="18"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        Text="Drop files or folders to send to phone Downloads"/>
                         </Border>
                     </Grid>
@@ -678,11 +682,11 @@
 
                 <Border Grid.Row="4"
                         Padding="18,12"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,1,0,0">
                     <TextBlock x:Name="OperationStatusText"
                                VerticalAlignment="Center"
-                               Foreground="{StaticResource MutedBrush}"
+                               Foreground="{DynamicResource MutedBrush}"
                                Text="Ready"/>
                 </Border>
             </Grid>

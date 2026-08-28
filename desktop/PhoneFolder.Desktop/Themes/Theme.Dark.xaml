@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Clean Notepad++-style charcoal palette with no light application surfaces. -->
+    <SolidColorBrush x:Key="WindowBrush" Color="#0F1113"/>
+    <SolidColorBrush x:Key="TitleBarBrush" Color="#17191B"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="#17191B"/>
+    <SolidColorBrush x:Key="PanelRaisedBrush" Color="#1D2022"/>
+    <SolidColorBrush x:Key="ControlBrush" Color="#25282B"/>
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="#303438"/>
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="#3A3F43"/>
+    <SolidColorBrush x:Key="DisabledBrush" Color="#1A1C1E"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#69C45A"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#7BD56A"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#4FB795"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#F2F2F2"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#A9ADAF"/>
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#666B6E"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#34383B"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="#31582E"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#D46A6A"/>
+
+    <!-- Promoted from previously-inline hardcoded colors so they can vary by theme. -->
+    <SolidColorBrush x:Key="FileIconBrush" Color="#8C9294"/>
+    <SolidColorBrush x:Key="FolderIconBrush" Color="#D99A3E"/>
+    <SolidColorBrush x:Key="VideoBadgeBrush" Color="#CC181A1B"/>
+    <SolidColorBrush x:Key="CloseHoverBrush" Color="#C42B1C"/>
+    <SolidColorBrush x:Key="ButtonHoverBorderBrush" Color="#626667"/>
+    <SolidColorBrush x:Key="ButtonDisabledBorderBrush" Color="#303233"/>
+    <SolidColorBrush x:Key="NavigationButtonBrush" Color="#292C2D"/>
+    <SolidColorBrush x:Key="NavigationButtonBorderBrush" Color="#55595A"/>
+    <SolidColorBrush x:Key="DisconnectedButtonBrush" Color="#352829"/>
+    <SolidColorBrush x:Key="DisconnectedButtonBorderBrush" Color="#75484A"/>
+    <SolidColorBrush x:Key="DisconnectedButtonTextBrush" Color="#D88A8A"/>
+    <SolidColorBrush x:Key="ConnectedDisconnectButtonBrush" Color="#3B292A"/>
+    <SolidColorBrush x:Key="ConnectedDisconnectButtonTextBrush" Color="#F0A0A0"/>
+    <SolidColorBrush x:Key="TextBoxBackgroundBrush" Color="#151718"/>
+    <SolidColorBrush x:Key="GridLineBrush" Color="#303233"/>
+    <SolidColorBrush x:Key="AlternateRowBrush" Color="#232526"/>
+    <SolidColorBrush x:Key="ColumnHeaderBrush" Color="#2B2D2E"/>
+    <SolidColorBrush x:Key="CutPendingBrush" Color="#273027"/>
+    <SolidColorBrush x:Key="RowHoverBrush" Color="#303531"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#4B5054"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#62686C"/>
+    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#141617"/>
+</ResourceDictionary>
