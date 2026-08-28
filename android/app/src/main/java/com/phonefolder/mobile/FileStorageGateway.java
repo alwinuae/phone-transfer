@@ -101,10 +101,9 @@ final class FileStorageGateway implements StorageBackend {
     @Override
     public Item upload(String parentId, String name, InputStream input, long length) throws Exception {
         requireValidName(name);
-        File destination = requireInsideRoot(new File(requireDirectory(parentId), name));
-        if (destination.exists()) {
-            throw new IllegalArgumentException("An item with this name already exists.");
-        }
+        File parent = requireDirectory(parentId);
+        String destinationName = keepBothName(parent, name, false);
+        File destination = requireInsideRoot(new File(parent, destinationName));
         boolean completed = false;
         try (OutputStream output = new BufferedOutputStream(
                 new FileOutputStream(destination),
@@ -123,7 +122,9 @@ final class FileStorageGateway implements StorageBackend {
     @Override
     public Item createFolder(String parentId, String name) throws Exception {
         requireValidName(name);
-        File folder = requireInsideRoot(new File(requireDirectory(parentId), name));
+        File parent = requireDirectory(parentId);
+        String destinationName = keepBothName(parent, name, true);
+        File folder = requireInsideRoot(new File(parent, destinationName));
         if (!folder.mkdir()) {
             throw new IllegalStateException("The folder could not be created.");
         }

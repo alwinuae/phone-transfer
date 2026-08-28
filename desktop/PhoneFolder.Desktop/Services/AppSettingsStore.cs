@@ -36,4 +36,13 @@ public static class AppSettingsStore
     }
 }
 
-public sealed record AppSettings(bool AlwaysOpenInDefaultApplication = false);
+public sealed record AppSettings(
+    bool AlwaysOpenInDefaultApplication = false,
+    AppThemeMode Theme = AppThemeMode.Dark);
+
+public enum AppThemeMode
+{
+    Dark,
+    Light,
+    System
+}

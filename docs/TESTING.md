@@ -31,6 +31,81 @@ cd android
 .\gradlew.bat :app:lintRelease :app:assembleRelease --console=plain
 ```
 
+## 0.7.5 Verification Summary
+
+Automated validation completed for the Windows command/send fixes and release
+artifacts:
+
+- `dotnet build PhoneFolder.slnx` completed with zero warnings and zero
+  errors after the 0.7.5 version bump.
+- `dotnet run --project tests\PhoneFolder.UiLayoutTests\PhoneFolder.UiLayoutTests.csproj`
+  passed. The test now covers queued startup `--send-to-phone` file/folder
+  sends, the single-instance command bridge, grouped Quick action entries, and
+  dark WPF layout/resource loading.
+- `dotnet run --project tests\PhoneFolder.NetworkTests\PhoneFolder.NetworkTests.csproj`
+  passed.
+- `powershell -ExecutionPolicy Bypass -File tests\Validate-ReleasePackaging.ps1`
+  passed and now checks that Explorer right-click verbs use multi-select
+  `%*` forwarding instead of single-path `%1` forwarding.
+- Android `assembleDebug`, `lintDebug`, and `testDebugUnitTest` completed
+  successfully from the Android Gradle root.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-release.ps1 -Version 0.7.5`
+  produced `Phone-Transfer-Windows-Setup-v0.7.5.exe` and
+  `Phone-Transfer-Android-v0.7.5.apk`.
+- `powershell -ExecutionPolicy Bypass -File tests\Validate-ReleasePackaging.ps1 -RequireBuiltArtifacts -Version 0.7.5`
+  passed against the generated release artifacts and checksums.
+- Live phone/emulator E2E could not be driven in this environment because
+  `adb` is not installed (`adb devices` is not recognized).
+
+## 0.7.4 Verification Summary
+
+- The full .NET solution builds with zero warnings and zero errors.
+- WPF regression checks click minimize, maximize, restore, and close and
+  verify the expected state on the containing window.
+- Main and folder command bars remain on one row at every supported test
+  width, scale down without horizontal scrolling, and expand at wider sizes.
+- Off-screen renders verify the compact 1040x680 main window and 720x440
+  independent folder window without wrapping or overlap.
+- Network diagnostics, trusted-phone persistence, and setup preference checks
+  pass.
+- Release packaging produces only the versioned Windows Setup EXE and signed
+  Android APK. The Windows installer upgrades Installed Apps to `0.7.4`.
+- Live desktop capture was unavailable because the bundled Windows automation
+  runtime could not initialize. Deterministic WPF input and layout regression
+  tests cover the affected controls.
+
+## 0.7.3 Verification Summary
+
+- The full .NET solution builds with zero warnings and zero errors.
+- Android release lint and compilation complete with zero errors and 15
+  existing localization warnings.
+- WPF layout regression passes main-window widths of 1040, 1180, 1380, and
+  1600 pixels and folder-window widths of 720, 800, 980, and 1200 pixels.
+- Navigation and file command buttons remain on one horizontal row at every
+  tested width. Compact widths reduce each button and its label without
+  scrolling, wrapping, or overlapping, then grow again with the window.
+- Main and folder windows use dark application backgrounds. The main window
+  and dialogs use custom dark title chrome; scrollbars, checkboxes, expanders,
+  menus, tooltips, data grids, lists, and disabled controls use dark templates.
+- The main window has no redundant File/Edit/View menu. Its existing
+  file-management, view, and sorting buttons occupy one clean top command
+  strip above navigation and the dark folder-tab strip.
+- Existing selection-state, compact-row, progress-bar, and multi-window
+  lifecycle regressions pass. New title-bar checks click minimize, maximize,
+  restore, and close and verify the expected window state.
+- Off-screen renders were checked at 1040x680, 1380x860, 720x440, and 980x640.
+- Release packaging produced the installable Setup EXE and signed APK with
+  matching SHA-256 entries and no portable Windows package.
+- Silent Windows installation exited with code `0`. Installed Apps registers
+  Phone Transfer `0.7.3`, publisher `Alwin Thomas`, the installed icon, normal
+  uninstall, and quiet uninstall commands.
+- The packaged Android app reports version code `13`, version `0.7.3`, target
+  SDK `36`, and verifies with the existing RSA release certificate.
+- The interactive Windows capture helper was unavailable because its bundled
+  runtime rejected an internal package export. The connected phone was not
+  reachable during this UI-only verification, so the previously passing
+  0.7.2 transfer/integration evidence was not rerun.
+
 ## 0.7.2 Verification Summary
 
 - The full .NET solution builds with zero warnings and zero errors.

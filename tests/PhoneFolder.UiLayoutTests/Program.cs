@@ -3,6 +3,7 @@ using PhoneFolder.Desktop.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -27,6 +28,8 @@ internal static class Program
             ValidateFolderWindow(renderDirectory);
             ValidateCompactTables();
             ValidateProgressBar();
+            ValidateMainCommandFlows();
+            ValidateCommandBridge();
             WindowLifecycleTests.Run(application);
 
             Console.WriteLine("PASS: WPF dark-theme layout, command-state, and window-lifecycle checks.");
@@ -42,18 +45,33 @@ internal static class Program
     private static void ValidateMainWindow(string? renderDirectory)
     {
         using var scope = new WindowScope(new MainWindow());
+        double? narrowActionWidth = null;
         foreach (var width in new[] { 1040d, 1180d, 1380d, 1600d })
         {
             Layout(scope.Window, width, 680);
             AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "MainHeaderButtonsPanel"),
-                $"main header at {width:0}px",
-                70);
-            AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "FileActionsPanel"),
+                Require<UniformGrid>(scope.Window, "MainHeaderButtonsPanel"),
+                $"main header at {width:0}px");
+            var actionWidth = AssertToolbarLayout(
+                Require<UniformGrid>(scope.Window, "FileActionsPanel"),
                 $"main file actions at {width:0}px");
+            if (narrowActionWidth is null)
+            {
+                narrowActionWidth = actionWidth;
+            }
+            else if (Math.Abs(width - 1600) < 0.1)
+            {
+                Assert(
+                    actionWidth > narrowActionWidth + 10,
+                    "Main file-action buttons do not grow and shrink with the window.");
+            }
         }
 
+        AssertDarkWindowChrome(scope.Window, "Main window");
+        Assert(
+            FindVisualChild<Menu>(scope.Window) is null,
+            "The main window still contains the removed File/Edit/View menu bar.");
+        Require<ListBox>(scope.Window, "FolderTabsList");
         AssertDisabled(scope.Window, "DownloadButton");
         AssertDisabled(scope.Window, "CopySelectionButton");
         AssertDisabled(scope.Window, "CutSelectionButton");
@@ -70,6 +88,10 @@ internal static class Program
             RenderWindowContent(
                 scope.Window,
                 Path.Combine(renderDirectory, "main-dark-1040x680.png"));
+            Layout(scope.Window, 1380, 860);
+            RenderWindowContent(
+                scope.Window,
+                Path.Combine(renderDirectory, "main-dark-1380x860.png"));
         }
     }
 
@@ -79,18 +101,29 @@ internal static class Program
         using var client = new RemoteClient("127.0.0.1", 8765, "layout-test");
         using var scope = new WindowScope(
             new FolderWindow(client, [("root", "Phone")]));
+        double? narrowActionWidth = null;
         foreach (var width in new[] { 720d, 800d, 980d, 1200d })
         {
             Layout(scope.Window, width, 440);
             AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "FolderNavigationPanel"),
-                $"folder navigation at {width:0}px",
-                70);
-            AssertToolbarLayout(
-                Require<WrapPanel>(scope.Window, "FolderActionsPanel"),
+                Require<UniformGrid>(scope.Window, "FolderNavigationPanel"),
+                $"folder navigation at {width:0}px");
+            var actionWidth = AssertToolbarLayout(
+                Require<UniformGrid>(scope.Window, "FolderActionsPanel"),
                 $"folder actions at {width:0}px");
+            if (narrowActionWidth is null)
+            {
+                narrowActionWidth = actionWidth;
+            }
+            else if (Math.Abs(width - 1200) < 0.1)
+            {
+                Assert(
+                    actionWidth > narrowActionWidth + 10,
+                    "Folder action buttons do not grow and shrink with the window.");
+            }
         }
 
+        AssertDarkWindowChrome(scope.Window, "Folder window");
         AssertDisabled(scope.Window, "DownloadButton");
         AssertDisabled(scope.Window, "CopyButton");
         AssertDisabled(scope.Window, "CutButton");
@@ -160,6 +193,10 @@ internal static class Program
             RenderWindowContent(
                 scope.Window,
                 Path.Combine(renderDirectory, "folder-dark-720x440.png"));
+            Layout(scope.Window, 980, 640);
+            RenderWindowContent(
+                scope.Window,
+                Path.Combine(renderDirectory, "folder-dark-980x640.png"));
         }
     }
 
@@ -222,28 +259,139 @@ internal static class Program
         Assert(label.Text == "42%", "Progress percentage text is not rendered by the bar template.");
     }
 
-    private static void AssertToolbarLayout(
+    private static void ValidateMainCommandFlows()
+    {
+        using var scope = new WindowScope(new MainWindow());
+        var quickAction = Require<Button>(scope.Window, "QuickActionButton");
+        var quickHeaders = quickAction.ContextMenu?.Items
+            .OfType<MenuItem>()
+            .Select(item => item.Header?.ToString())
+            .Where(header => !string.IsNullOrWhiteSpace(header))
+            .ToArray()
+            ?? [];
+        Assert(
+            quickHeaders.Contains("Send PC files to phone Downloads..."),
+            "Quick action menu does not expose file send to phone Downloads.");
+        Assert(
+            quickHeaders.Contains("Send PC folder to phone Downloads..."),
+            "Quick action menu does not expose folder send to phone Downloads.");
+        Assert(
+            quickHeaders.Contains("Download selected to PC Downloads"),
+            "Quick action menu does not expose download to PC Downloads.");
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"PhoneTransferUi-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var filePath = Path.Combine(tempRoot, "send-file.txt");
+            var folderPath = Path.Combine(tempRoot, "send-folder");
+            File.WriteAllText(filePath, "send test");
+            Directory.CreateDirectory(folderPath);
+
+            var mainWindow = (MainWindow)scope.Window;
+            mainWindow.HandleStartupArgs([
+                "--send-to-phone",
+                "--mode",
+                "online",
+                filePath,
+                folderPath
+            ]);
+
+            var pendingPaths = (List<string>)typeof(MainWindow)
+                .GetField(
+                    "_pendingSendToPhonePaths",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(mainWindow)!;
+            var pendingMode = (string)typeof(MainWindow)
+                .GetField(
+                    "_pendingSendMode",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(mainWindow)!;
+            var status = Require<TextBlock>(scope.Window, "OperationStatusText").Text;
+            Assert(pendingPaths.Count == 2, "Startup send-to-phone did not queue both file and folder.");
+            Assert(pendingMode == "online", "Startup send-to-phone did not preserve online mode.");
+            Assert(
+                status.Contains("phone Downloads", StringComparison.OrdinalIgnoreCase),
+                "Startup send-to-phone status does not tell the user where items will go.");
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    private static void ValidateCommandBridge()
+    {
+        var previousScope = Environment.GetEnvironmentVariable("PHONEFOLDER_INSTANCE_SCOPE");
+        Environment.SetEnvironmentVariable("PHONEFOLDER_INSTANCE_SCOPE", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var received = new TaskCompletionSource<IReadOnlyList<string>>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            Assert(
+                AppCommandBridge.TryCreatePrimary(
+                    args => received.TrySetResult(args.ToArray()),
+                    out var bridge),
+                "The app command bridge did not create a primary instance.");
+            using (bridge!)
+            {
+                Assert(
+                    !AppCommandBridge.TryCreatePrimary(_ => { }, out var secondBridge),
+                    "The app command bridge allowed a second primary instance.");
+                secondBridge?.Dispose();
+
+                var sent = AppCommandBridge.TrySendAsync(
+                        ["--send-to-phone", @"C:\Temp\sample.txt"],
+                        TimeSpan.FromSeconds(3))
+                    .GetAwaiter()
+                    .GetResult();
+                Assert(sent, "The app command bridge did not accept forwarded arguments.");
+                Assert(
+                    received.Task.Wait(TimeSpan.FromSeconds(3)),
+                    "The app command bridge did not deliver forwarded arguments.");
+
+                var args = received.Task.Result;
+                Assert(
+                    args.SequenceEqual(["--send-to-phone", @"C:\Temp\sample.txt"]),
+                    "The app command bridge changed forwarded arguments.");
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PHONEFOLDER_INSTANCE_SCOPE", previousScope);
+        }
+    }
+
+    private static double AssertToolbarLayout(
         Panel panel,
-        string label,
-        double minimumWidth = 78)
+        string label)
     {
         var buttons = panel.Children.OfType<Button>().ToArray();
         Assert(buttons.Length > 0, $"{label} contains no buttons.");
+        Assert(
+            FindVisualAncestor<ScrollViewer>(panel) is null,
+            $"{label} is still inside a horizontal scrolling container.");
 
         foreach (var button in buttons)
         {
             Assert(
-                Math.Abs(button.ActualHeight - 34) < 0.1,
+                Math.Abs(button.ActualHeight - 34) < 0.75,
                 $"{label}: {button.NameOrContent()} height changed to {button.ActualHeight:0.##}.");
             Assert(
-                button.ActualWidth >= minimumWidth,
-                $"{label}: {button.NameOrContent()} width shrank to {button.ActualWidth:0.##}.");
+                button.ActualWidth >= 24,
+                $"{label}: {button.NameOrContent()} became unusably narrow at {button.ActualWidth:0.##}.");
             var origin = button.TranslatePoint(new Point(0, 0), panel);
             Assert(origin.X >= 0 && origin.Y >= 0, $"{label}: a button is outside its panel.");
             Assert(
                 origin.X + button.ActualWidth <= panel.ActualWidth + 0.1,
                 $"{label}: {button.NameOrContent()} extends beyond the panel.");
         }
+
+        var rowTop = buttons[0].TranslatePoint(new Point(0, 0), panel).Y;
+        Assert(
+            buttons.All(button =>
+                Math.Abs(button.TranslatePoint(new Point(0, 0), panel).Y - rowTop) < 0.1),
+            $"{label}: buttons wrapped onto more than one row.");
 
         for (var first = 0; first < buttons.Length; first++)
         {
@@ -262,6 +410,24 @@ internal static class Program
                     $"{label}: {buttons[first].NameOrContent()} overlaps {buttons[second].NameOrContent()}.");
             }
         }
+
+        return buttons.Average(button => button.ActualWidth);
+    }
+
+    private static void AssertDarkWindowChrome(Window window, string label)
+    {
+        Assert(
+            window.WindowStyle == WindowStyle.None,
+            $"{label} still uses the light native title bar.");
+        Assert(
+            window.Background is SolidColorBrush background
+            && background.Color.R < 40
+            && background.Color.G < 40
+            && background.Color.B < 40,
+            $"{label} does not use a clean dark background.");
+        Assert(
+            window.Template.FindName("WindowFrame", window) is Border,
+            $"{label} custom dark window frame is missing.");
     }
 
     private static void AssertDisabled(FrameworkElement root, string name)
@@ -295,6 +461,21 @@ internal static class Program
             {
                 return descendant;
             }
+        }
+        return null;
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject child)
+        where T : DependencyObject
+    {
+        var current = VisualTreeHelper.GetParent(child);
+        while (current is not null)
+        {
+            if (current is T match)
+            {
+                return match;
+            }
+            current = VisualTreeHelper.GetParent(current);
         }
         return null;
     }

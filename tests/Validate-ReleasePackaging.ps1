@@ -1,11 +1,12 @@
 param(
-    [string]$Version = "0.7.2",
+    [string]$Version = "0.7.5",
     [switch]$RequireBuiltArtifacts
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $buildScriptPath = Join-Path $root "scripts\build-release.ps1"
+$installerScriptPath = Join-Path $root "installer\PhoneTransfer.iss"
 $portableWorkflowPath = Join-Path $root ".github\workflows\publish-portable-windows.yml"
 $releaseRoot = Join-Path $root "artifacts\release"
 $portableArtifact = Join-Path $releaseRoot "Phone-Transfer-Windows-v$Version.exe"
@@ -30,6 +31,16 @@ Assert-Condition (-not ($buildScript -match '\$windowsArtifact')) `
     "The release build still defines or hashes a portable Windows artifact."
 Assert-Condition (-not (Test-Path -LiteralPath $portableWorkflowPath)) `
     "The portable Windows GitHub release workflow still exists."
+
+$installerScript = Get-Content -LiteralPath $installerScriptPath -Raw
+Assert-Condition (($installerScript | Select-String -Pattern 'MultiSelectModel' -AllMatches).Matches.Count -ge 6) `
+    "The Explorer context-menu verbs are missing multi-select support."
+Assert-Condition (($installerScript | Select-String -Pattern '%\*' -AllMatches).Matches.Count -ge 6) `
+    "The Explorer context-menu verbs must forward all selected paths with %*."
+Assert-Condition (-not ($installerScript -match '""%1""')) `
+    "The Explorer context-menu verbs still forward only one selected path."
+Assert-Condition ($installerScript -match 'Phone Transfer \(Wi-Fi\)' -and $installerScript -match 'Phone Transfer \(Online\)') `
+    "The Windows SendTo shortcuts for Wi-Fi and Online transfer are missing."
 
 if ($RequireBuiltArtifacts) {
     Assert-Condition (Test-Path -LiteralPath $installerArtifact) `

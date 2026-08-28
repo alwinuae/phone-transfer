@@ -1,3 +1,4 @@
+using PhoneFolder.Desktop.Models;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -233,7 +234,8 @@ public sealed record RememberedConnection(
     string TrustedToken = "",
     string ClientId = "",
     DateTimeOffset LastConnectedAt = default,
-    bool IsEnabled = true)
+    bool IsEnabled = true,
+    ConnectionMethod Method = ConnectionMethod.Manual)
 {
     public string DisplayName => IsEnabled
         ? $"{DeviceName} ({Host})"

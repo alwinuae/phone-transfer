@@ -2,11 +2,13 @@ using Microsoft.Win32;
 using PhoneFolder.Desktop.Models;
 using PhoneFolder.Desktop.Services;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -19,7 +21,10 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<DiscoveredDevice> _discoveredDevices = [];
     private readonly ObservableCollection<RememberedConnection> _trustedDevices = [];
     private readonly ObservableCollection<FolderNode> _folderRoots = [];
+    private readonly ObservableCollection<BrowserTab> _browserTabs = [];
     private readonly Stack<NavigationEntry> _history = [];
+    private readonly List<string> _pendingSendToPhonePaths = [];
+    private readonly HashSet<string> _queuedPhoneShareIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly DiscoveryService _discoveryService = new();
     private readonly ListCollectionView _itemsView;
     private RememberedConnection? _rememberedConnection;
@@ -27,10 +32,15 @@ public partial class MainWindow : Window
     private RemoteItem? _rootItem;
     private NavigationEntry? _current;
     private CancellationTokenSource? _thumbnailCancellation;
+    private CancellationTokenSource? _shareInboxCancellation;
+    private string _pendingSendMode = "wifi";
+    private ConnectionMethod _pendingConnectionMethod = ConnectionMethod.Manual;
     private GridLength _folderPaneWidth = new(220);
     private FileSortField _sortField = FileSortField.Name;
     private bool _sortDescending;
     private FileViewMode _viewMode = FileViewMode.Details;
+    private BrowserTab? _activeBrowserTab;
+    private bool _suppressTabSelection;
     private int _busyDepth;
 
     public MainWindow()
@@ -41,6 +51,7 @@ public partial class MainWindow : Window
         FilesGrid.ItemsSource = _itemsView;
         FilesList.ItemsSource = _itemsView;
         ThumbnailList.ItemsSource = _itemsView;
+        FolderTabsList.ItemsSource = _browserTabs;
         DiscoveredDevicesCombo.ItemsSource = _discoveredDevices;
         TrustedDevicesCombo.ItemsSource = _trustedDevices;
         FolderTree.DataContext = _folderRoots;
@@ -61,6 +72,7 @@ public partial class MainWindow : Window
     {
         if (_rememberedConnection is not null)
         {
+            _pendingConnectionMethod = _rememberedConnection.Method;
             await ConnectFromFieldsAsync(automatic: true);
         }
     }
@@ -69,9 +81,14 @@ public partial class MainWindow : Window
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         var alt = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
         var isViewShortcut = control && key is Key.D1 or Key.D2 or Key.D3 or Key.D4 or Key.D5 or Key.D6;
-        if (Keyboard.FocusedElement is TextBox && key != Key.Escape && !isViewShortcut)
+        var isTabShortcut = control && key is Key.T or Key.W or Key.Tab;
+        if (Keyboard.FocusedElement is TextBox
+            && key != Key.Escape
+            && !isViewShortcut
+            && !isTabShortcut)
         {
             return;
         }
@@ -113,6 +130,11 @@ public partial class MainWindow : Window
             SelectAllVisibleItems();
             e.Handled = true;
         }
+        else if (control && key == Key.Tab)
+        {
+            await SwitchBrowserTabAsync(reverse: shift);
+            e.Handled = true;
+        }
         else if (control && key == Key.C && SelectedItems().Count > 0)
         {
             CopySelectionButton_Click(sender, e);
@@ -126,6 +148,16 @@ public partial class MainWindow : Window
         else if (control && key == Key.V && RemoteClipboard.HasItems)
         {
             PasteButton_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (control && key == Key.T)
+        {
+            await OpenFolderInNewTabAsync();
+            e.Handled = true;
+        }
+        else if (control && key == Key.W)
+        {
+            await CloseBrowserTabAsync(_activeBrowserTab);
             e.Handled = true;
         }
         else if (control && key == Key.D1)
@@ -193,7 +225,11 @@ public partial class MainWindow : Window
     }
 
     private void RemoteClipboard_Changed(object? sender, EventArgs e) =>
-        Dispatcher.Invoke(UpdateActionState);
+        Dispatcher.Invoke(() =>
+        {
+            UpdateCutPendingStates();
+            UpdateActionState();
+        });
 
     private void RefreshTrustedDevices(RememberedConnection? selected)
     {
@@ -242,6 +278,7 @@ public partial class MainWindow : Window
         }
 
         ApplyRememberedConnection(profile);
+        _pendingConnectionMethod = profile.Method;
         await ConnectFromFieldsAsync(automatic: false);
     }
 
@@ -268,11 +305,14 @@ public partial class MainWindow : Window
 
     private async void ConnectDiscoveredButton_Click(object sender, RoutedEventArgs e)
     {
-        if (DiscoveredDevicesCombo.SelectedItem is not DiscoveredDevice)
+        if (DiscoveredDevicesCombo.SelectedItem is not DiscoveredDevice selectedDevice)
         {
             ShowError("Find and select a phone on router Wi-Fi first.");
             return;
         }
+        _pendingConnectionMethod = selectedDevice.IsHotspot
+            ? ConnectionMethod.PcHotspot
+            : ConnectionMethod.RouterWifi;
         await ConnectFromFieldsAsync(automatic: false);
     }
 
@@ -348,6 +388,7 @@ public partial class MainWindow : Window
 
         if (selectedDevice is not null && !string.IsNullOrWhiteSpace(TokenTextBox.Text))
         {
+            _pendingConnectionMethod = ConnectionMethod.PcHotspot;
             await ConnectFromFieldsAsync(automatic: false);
         }
         else
@@ -379,6 +420,7 @@ public partial class MainWindow : Window
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
     {
+        _pendingConnectionMethod = ConnectionMethod.Manual;
         await ConnectFromFieldsAsync(automatic: false);
     }
 
@@ -456,17 +498,19 @@ public partial class MainWindow : Window
             HostTextBox.Text = endpoint.Host;
             PortTextBox.Text = endpoint.Port.ToString();
             ConnectionStatusText.Text = $"Connected to {info.Name}";
+            ConnectionMethodText.Text = DescribeConnectionMethod(_pendingConnectionMethod);
             DeviceDetailsText.Text = $"{HotspotService.ConnectionDescription(endpoint.Host)}"
                 + $" | HTTPS | Protocol {info.ProtocolVersion}\n"
-                + $"Certificate SHA-256:\n{info.CertificateFingerprint}";
+                + $"Certificate SHA-256:\n{FormatFingerprint(info.CertificateFingerprint)}";
             _history.Clear();
             _folderRoots.Clear();
+            ResetBrowserTabs();
 
             if (roots.Count == 0)
             {
                 _rootItem = null;
                 _items.Clear();
-                PathText.Text = "No shared folder is available";
+                SetPathPlaceholder("No shared folder is available");
                 OperationStatusText.Text = "Choose a folder in the Android app.";
                 await RefreshStorageInfoAsync();
                 UpdateActionState();
@@ -475,12 +519,12 @@ public partial class MainWindow : Window
 
             _rootItem = roots[0];
             _folderRoots.Add(FolderNode.Create(_rootItem.Id, _rootItem.Name));
-            await NavigateAsync(
-                new NavigationEntry(
-                    _rootItem.Id,
-                    _rootItem.Name,
-                    [new PathSegment(_rootItem.Id, _rootItem.Name)]),
-                addToHistory: false);
+            var rootDestination = new NavigationEntry(
+                _rootItem.Id,
+                _rootItem.Name,
+                [new PathSegment(_rootItem.Id, _rootItem.Name)]);
+            CreateBrowserTab(rootDestination);
+            await NavigateAsync(rootDestination, addToHistory: false);
 
             if (RememberDeviceCheckBox.IsChecked == true)
             {
@@ -494,7 +538,8 @@ public partial class MainWindow : Window
                         info.Name,
                         trustedToken,
                         clientId,
-                        DateTimeOffset.UtcNow);
+                        DateTimeOffset.UtcNow,
+                        Method: _pendingConnectionMethod);
                     ConnectionProfileStore.Save(_rememberedConnection);
                     RefreshTrustedDevices(_rememberedConnection);
                 }
@@ -510,6 +555,9 @@ public partial class MainWindow : Window
                 _rememberedConnection = null;
                 RefreshTrustedDevices(null);
             }
+
+            StartShareInboxWatcher();
+            await FlushPendingSendToPhoneAsync();
         }
         catch (Exception exception)
         {
@@ -610,9 +658,13 @@ public partial class MainWindow : Window
         throw new InvalidOperationException(initial.Message);
     }
 
-    private void DisconnectButton_Click(object sender, RoutedEventArgs e)
+    private void DisconnectButton_Click(object sender, RoutedEventArgs e) =>
+        HandleDisconnected("Ready");
+
+    private void HandleDisconnected(string reason)
     {
         _thumbnailCancellation?.Cancel();
+        StopShareInboxWatcher();
         _client?.Dispose();
         _client = null;
         _rootItem = null;
@@ -620,12 +672,14 @@ public partial class MainWindow : Window
         _history.Clear();
         _items.Clear();
         _folderRoots.Clear();
+        ResetBrowserTabs();
         ConnectionStatusText.Text = "Not connected";
+        ConnectionMethodText.Text = string.Empty;
         DeviceDetailsText.Text = string.Empty;
         StorageStatusText.Visibility = Visibility.Collapsed;
         StorageUsageBar.Visibility = Visibility.Collapsed;
-        PathText.Text = "Connect to a phone to browse files";
-        OperationStatusText.Text = "Ready";
+        SetPathPlaceholder("Connect to a phone to browse files");
+        OperationStatusText.Text = reason;
         UpdateActionState();
     }
 
@@ -763,21 +817,81 @@ public partial class MainWindow : Window
         DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Copy | DragDropEffects.Move);
     }
 
-    private void OpenFolderWindowButton_Click(object sender, RoutedEventArgs e)
+    private async void OpenFolderWindowButton_Click(object sender, RoutedEventArgs e) =>
+        await OpenFolderInNewTabAsync();
+
+    private async void CloseFolderTabButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is Button { Tag: BrowserTab tab })
+        {
+            await CloseBrowserTabAsync(tab);
+        }
+    }
+
+    private async void InternetTransferButton_Click(object sender, RoutedEventArgs e)
+    {
+        SetupExpander.IsExpanded = true;
+        var current = string.IsNullOrWhiteSpace(HostTextBox.Text)
+            ? "https://your-phone-address:8765"
+            : $"{HostTextBox.Text}:{PortTextBox.Text}";
+        var address = PromptWindow.Show(
+            this,
+            "Internet transfer",
+            "Online, VPN, or tunnel address",
+            current);
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            HostTextBox.Focus();
+            OperationStatusText.Text =
+                "Enter a reachable online, VPN, or tunnel address, then connect with the same access code.";
+            return;
+        }
+        if (!ApplyEndpointText(address.Trim(), out var error))
+        {
+            ShowError(error);
+            return;
+        }
+
+        _pendingSendMode = "online";
+        _pendingConnectionMethod = ConnectionMethod.Internet;
+        OperationStatusText.Text = "Connecting through the online address...";
+        await ConnectFromFieldsAsync(automatic: false);
+    }
+
+    private async Task OpenFolderInNewTabAsync()
     {
         if (_client is null || _current is null)
         {
             return;
         }
 
-        var selectedFolder = SelectedItems().FirstOrDefault(item => item.IsDirectory);
-        var path = _current.Path.Select(item => (item.Id, item.Name));
-        if (selectedFolder is not null)
+        var destination = SelectedFolderDestination();
+        if (destination is null)
         {
-            path = path.Append((selectedFolder.Id, selectedFolder.Name));
+            return;
         }
-        WindowCoordinator.Instance.ShowIndependent(
-            new FolderWindow(_client, path.ToArray()));
+
+        var tab = new BrowserTab(destination);
+        _browserTabs.Add(tab);
+        await ActivateBrowserTabAsync(tab);
+    }
+
+    private NavigationEntry? SelectedFolderDestination()
+    {
+        if (_current is null)
+        {
+            return null;
+        }
+
+        var selectedFolder = SelectedItems().FirstOrDefault(item => item.IsDirectory);
+        return selectedFolder is null
+            ? _current
+            : new NavigationEntry(
+                selectedFolder.Id,
+                selectedFolder.Name,
+                _current.Path.Append(
+                    new PathSegment(selectedFolder.Id, selectedFolder.Name)).ToArray());
     }
 
     private void CopySelectionButton_Click(object sender, RoutedEventArgs e) =>
@@ -796,6 +910,7 @@ public partial class MainWindow : Window
         }
         RemoteClipboard.Set(_client!, selected, cut);
         OperationStatusText.Text = $"{(cut ? "Cut" : "Copied")} {selected.Count} item(s).";
+        UpdateCutPendingStates();
         UpdateActionState();
     }
 
@@ -856,6 +971,26 @@ public partial class MainWindow : Window
         await Task.CompletedTask;
     }
 
+    private void UploadActionsButton_Click(object sender, RoutedEventArgs e) =>
+        OpenButtonMenu(UploadActionsButton);
+
+    private void QuickActionButton_Click(object sender, RoutedEventArgs e) =>
+        OpenButtonMenu(QuickActionButton);
+
+    private void SelectActionsButton_Click(object sender, RoutedEventArgs e) =>
+        OpenButtonMenu(SelectActionsButton);
+
+    private static void OpenButtonMenu(Button button)
+    {
+        if (button.ContextMenu is null)
+        {
+            return;
+        }
+        button.ContextMenu.PlacementTarget = button;
+        button.ContextMenu.Placement = PlacementMode.Bottom;
+        button.ContextMenu.IsOpen = true;
+    }
+
     private async void UploadButton_Click(object sender, RoutedEventArgs e)
     {
         if (!EnsureConnected() || _current is null)
@@ -895,6 +1030,73 @@ public partial class MainWindow : Window
         }
 
         await UploadPathsAsync([dialog.FolderName], _current.Id, _current.Name);
+    }
+
+    private async void SendToPhoneDownloads_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Choose files to send to phone Downloads",
+            Multiselect = true,
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            await UploadPathsToPhoneDownloadsAsync(dialog.FileNames);
+        }
+    }
+
+    private async void SendFolderToPhoneDownloads_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Choose a folder to send to phone Downloads",
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            await UploadPathsToPhoneDownloadsAsync([dialog.FolderName]);
+        }
+    }
+
+    private async void DownloadToPcDownloads_Click(object sender, RoutedEventArgs e)
+    {
+        if (!EnsureConnected())
+        {
+            return;
+        }
+
+        var selected = SelectedItems();
+        if (selected.Count == 0)
+        {
+            ShowError("Select one or more files or folders to download.");
+            return;
+        }
+
+        var downloads = KnownDownloadsFolder();
+        foreach (var item in selected)
+        {
+            TransferManager.Instance.Enqueue(
+                _client!,
+                item.Name,
+                "Download",
+                item.Size,
+                async (client, progress, cancellationToken) =>
+                {
+                    await client.DownloadSelectionAsync(
+                        [item],
+                        downloads,
+                        (_, value, _) => progress(value),
+                        cancellationToken);
+                },
+                location: downloads,
+                localPath: Path.Combine(downloads, item.Name));
+        }
+
+        ShowTransfersWindow();
+        OperationStatusText.Text =
+            $"Queued {selected.Count} item(s) for download to {downloads}.";
+        await Task.CompletedTask;
     }
 
     private async Task UploadPathsAsync(
@@ -941,7 +1143,8 @@ public partial class MainWindow : Window
                     _ = RefreshFolderIfCurrentAsync(destinationId);
                     _ = RefreshStorageInfoAsync();
                 },
-                location: destinationName);
+                location: destinationName,
+                localPath: path);
         }
 
         ShowTransfersWindow();
@@ -950,15 +1153,82 @@ public partial class MainWindow : Window
         await Task.CompletedTask;
     }
 
+    private async Task UploadPathsToPhoneDownloadsAsync(IReadOnlyList<string> paths)
+    {
+        if (_client is null || _rootItem is null)
+        {
+            RememberPendingSendToPhone(paths, _pendingSendMode);
+            OperationStatusText.Text =
+                $"Connect to a phone to send {paths.Count} item(s) to phone Downloads.";
+            return;
+        }
+
+        var downloads = await ResolvePhoneDownloadsFolderAsync();
+        if (downloads is null)
+        {
+            ShowError("Phone Downloads is not available yet. Choose storage access in the Android app.");
+            return;
+        }
+
+        await UploadPathsAsync(paths, downloads.Id, downloads.Name);
+    }
+
+    private async Task<RemoteItem?> ResolvePhoneDownloadsFolderAsync()
+    {
+        if (_client is null || _rootItem is null)
+        {
+            return null;
+        }
+        if (IsDownloadsFolderName(_rootItem.Name))
+        {
+            return _rootItem;
+        }
+
+        var children = await _client.GetChildrenAsync(_rootItem.Id);
+        var existing = children.FirstOrDefault(item =>
+            item.IsDirectory && IsDownloadsFolderName(item.Name));
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        return await _client.CreateFolderAsync(_rootItem.Id, "Download");
+    }
+
     private void FilesHost_DragOver(object sender, DragEventArgs e)
     {
-        var accepted = _client is not null
+        var hasFileDrop = e.Data.GetDataPresent(DataFormats.FileDrop);
+        var hasRemoteItems = _client is not null
             && _current is not null
-            && (e.Data.GetDataPresent(DataFormats.FileDrop)
-                || e.Data.GetDataPresent(RemoteItemsFormat));
+            && e.Data.GetDataPresent(RemoteItemsFormat);
+        var accepted = hasFileDrop || hasRemoteItems;
         e.Effects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
         DropHint.Visibility = accepted ? Visibility.Visible : Visibility.Collapsed;
         e.Handled = true;
+    }
+
+    private void Window_DragOver(object sender, DragEventArgs e)
+    {
+        var accepted = e.Data.GetDataPresent(DataFormats.FileDrop);
+        e.Effects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = accepted;
+    }
+
+    private async void Window_Drop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)
+            || e.Data.GetData(DataFormats.FileDrop) is not string[] paths)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (!EnsureConnected())
+        {
+            RememberPendingSendToPhone(paths, _pendingSendMode);
+            return;
+        }
+        await UploadPathsToPhoneDownloadsAsync(paths);
     }
 
     private async void FilesHost_Drop(object sender, DragEventArgs e)
@@ -982,19 +1252,26 @@ public partial class MainWindow : Window
             {
                 ShowError(exception.Message);
             }
+            e.Handled = true;
             return;
         }
-        if (_current is null
-            || !e.Data.GetDataPresent(DataFormats.FileDrop)
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)
             || e.Data.GetData(DataFormats.FileDrop) is not string[] paths)
         {
             return;
         }
 
-        var target = FindDataContext<RemoteItem>(e.OriginalSource as DependencyObject);
-        var destinationId = target is { IsDirectory: true } ? target.Id : _current.Id;
-        var destinationName = target is { IsDirectory: true } ? target.Name : _current.Name;
-        await UploadPathsAsync(paths, destinationId, destinationName);
+        if (_client is null)
+        {
+            RememberPendingSendToPhone(paths, _pendingSendMode);
+            OperationStatusText.Text =
+                $"Queued {paths.Length} dropped item(s). Connect to a phone to send them to phone Downloads.";
+            e.Handled = true;
+            return;
+        }
+
+        await UploadPathsToPhoneDownloadsAsync(paths);
+        e.Handled = true;
     }
 
     private void FilesHost_DragLeave(object sender, DragEventArgs e)
@@ -1041,7 +1318,8 @@ public partial class MainWindow : Window
                         (_, value, _) => progress(value),
                         cancellationToken);
                 },
-                location: dialog.FolderName);
+                location: dialog.FolderName,
+                localPath: Path.Combine(dialog.FolderName, item.Name));
         }
 
         ShowTransfersWindow();
@@ -1227,6 +1505,7 @@ public partial class MainWindow : Window
                 };
                 _items.Add(item);
             }
+            UpdateCutPendingStates();
             _itemsView.Refresh();
 
             var folderNode = FindFolderNode(destination.Id);
@@ -1235,7 +1514,8 @@ public partial class MainWindow : Window
                 SynchronizeFolderNode(folderNode, children);
             }
 
-            PathText.Text = string.Join(" > ", destination.Path.Select(segment => segment.Name));
+            UpdatePathBreadcrumb(destination.Path);
+            SynchronizeActiveBrowserTab();
             var totalSize = children.Where(item => !item.IsDirectory).Sum(item => Math.Max(0, item.Size));
             OperationStatusText.Text = totalSize > 0
                 ? $"{children.Count} item(s) | {FormatSize(totalSize)}"
@@ -1244,6 +1524,183 @@ public partial class MainWindow : Window
             await LoadThumbnailsIfNeededAsync();
             await RefreshStorageInfoAsync();
         });
+    }
+
+    private void SetPathPlaceholder(string text)
+    {
+        PathText.Inlines.Clear();
+        PathText.Text = text;
+    }
+
+    private void UpdatePathBreadcrumb(IReadOnlyList<PathSegment> path)
+    {
+        PathText.Inlines.Clear();
+        for (var index = 0; index < path.Count; index++)
+        {
+            if (index > 0)
+            {
+                PathText.Inlines.Add(new Run(" > ")
+                {
+                    Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush")
+                });
+            }
+
+            var segment = path[index];
+            var destination = new NavigationEntry(
+                segment.Id,
+                segment.Name,
+                path.Take(index + 1).ToArray());
+            var link = new Hyperlink(new Run(segment.Name))
+            {
+                Tag = destination,
+                Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
+                TextDecorations = null,
+                ToolTip = $"Open {segment.Name}"
+            };
+            link.Click += Breadcrumb_Click;
+            PathText.Inlines.Add(link);
+        }
+    }
+
+    private async void Breadcrumb_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Hyperlink { Tag: NavigationEntry destination }
+            && destination.Id != _current?.Id)
+        {
+            await NavigateAsync(destination, addToHistory: true);
+        }
+    }
+
+    private void CreateBrowserTab(NavigationEntry destination)
+    {
+        var tab = new BrowserTab(destination);
+        _browserTabs.Add(tab);
+        SetSelectedBrowserTab(tab);
+    }
+
+    private async void FolderTabsList_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_suppressTabSelection
+            || FolderTabsList.SelectedItem is not BrowserTab tab
+            || ReferenceEquals(tab, _activeBrowserTab))
+        {
+            return;
+        }
+
+        await ActivateBrowserTabAsync(tab);
+    }
+
+    private async Task ActivateBrowserTabAsync(BrowserTab tab)
+    {
+        if (_client is null)
+        {
+            return;
+        }
+
+        _thumbnailCancellation?.Cancel();
+        _activeBrowserTab = tab;
+        _history.Clear();
+        foreach (var entry in tab.History)
+        {
+            _history.Push(entry);
+        }
+        _current = tab.Current;
+        SetSelectedBrowserTab(tab);
+        await NavigateAsync(tab.Current, addToHistory: false);
+    }
+
+    private async Task SwitchBrowserTabAsync(bool reverse)
+    {
+        if (_browserTabs.Count <= 1)
+        {
+            return;
+        }
+
+        var currentIndex = _activeBrowserTab is null
+            ? -1
+            : _browserTabs.IndexOf(_activeBrowserTab);
+        var nextIndex = reverse
+            ? (currentIndex <= 0 ? _browserTabs.Count - 1 : currentIndex - 1)
+            : (currentIndex < 0 || currentIndex >= _browserTabs.Count - 1 ? 0 : currentIndex + 1);
+        await ActivateBrowserTabAsync(_browserTabs[nextIndex]);
+    }
+
+    private async Task CloseBrowserTabAsync(BrowserTab? tab)
+    {
+        if (tab is null || !_browserTabs.Contains(tab))
+        {
+            return;
+        }
+
+        if (_browserTabs.Count == 1)
+        {
+            OperationStatusText.Text = "Keep at least one phone folder tab open.";
+            return;
+        }
+
+        var closingIndex = _browserTabs.IndexOf(tab);
+        var wasActive = ReferenceEquals(tab, _activeBrowserTab);
+        _browserTabs.Remove(tab);
+        if (!wasActive)
+        {
+            UpdateBrowserTabsVisibility();
+            return;
+        }
+
+        var nextIndex = Math.Min(closingIndex, _browserTabs.Count - 1);
+        await ActivateBrowserTabAsync(_browserTabs[nextIndex]);
+    }
+
+    private void SetSelectedBrowserTab(BrowserTab tab)
+    {
+        _suppressTabSelection = true;
+        try
+        {
+            _activeBrowserTab = tab;
+            FolderTabsList.SelectedItem = tab;
+            UpdateBrowserTabsVisibility();
+        }
+        finally
+        {
+            _suppressTabSelection = false;
+        }
+    }
+
+    private void SynchronizeActiveBrowserTab()
+    {
+        if (_activeBrowserTab is null || _current is null)
+        {
+            return;
+        }
+
+        _activeBrowserTab.Current = _current;
+        _activeBrowserTab.History.Clear();
+        _activeBrowserTab.History.AddRange(_history.Reverse());
+    }
+
+    private void ResetBrowserTabs()
+    {
+        _suppressTabSelection = true;
+        try
+        {
+            _activeBrowserTab = null;
+            _browserTabs.Clear();
+            FolderTabsList.SelectedItem = null;
+            UpdateBrowserTabsVisibility();
+        }
+        finally
+        {
+            _suppressTabSelection = false;
+        }
+    }
+
+    private void UpdateBrowserTabsVisibility()
+    {
+        FolderTabsList.Visibility = _browserTabs.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private async Task RefreshStorageInfoAsync()
@@ -1520,7 +1977,7 @@ public partial class MainWindow : Window
     private void ConnectionPaneToggle_Click(object sender, RoutedEventArgs e)
     {
         var collapse = ConnectionColumn.Width.Value > 0;
-        ConnectionColumn.Width = collapse ? new GridLength(0) : new GridLength(330);
+        ConnectionColumn.Width = collapse ? new GridLength(0) : new GridLength(318);
         ConnectionPane.Visibility = collapse ? Visibility.Collapsed : Visibility.Visible;
         ConnectionPaneToggle.Content = collapse ? ">" : "<";
         ConnectionPaneToggle.ToolTip = collapse
@@ -1556,6 +2013,12 @@ public partial class MainWindow : Window
         FolderPaneButton.Content = "Folders: On";
     }
 
+    private void SelectAllButton_Click(object sender, RoutedEventArgs e) =>
+        SelectAllVisibleItems();
+
+    private void ClearSelectionButton_Click(object sender, RoutedEventArgs e) =>
+        ClearVisibleSelection();
+
     private void SelectAllVisibleItems()
     {
         foreach (var item in _items)
@@ -1574,6 +2037,19 @@ public partial class MainWindow : Window
         {
             ThumbnailList.SelectAll();
         }
+        UpdateActionState();
+    }
+
+    private void ClearVisibleSelection()
+    {
+        foreach (var item in _items)
+        {
+            item.IsChecked = false;
+        }
+        FilesGrid.UnselectAll();
+        FilesList.UnselectAll();
+        ThumbnailList.UnselectAll();
+        UpdateActionState();
     }
 
     private IReadOnlyList<RemoteItem> SelectedItems()
@@ -1665,6 +2141,7 @@ public partial class MainWindow : Window
         DiscoverButton.IsEnabled = !busy;
         HotspotButton.IsEnabled = !busy;
         OpenHotspotSettingsButton.IsEnabled = !busy;
+        InternetTransferButton.IsEnabled = !busy;
         ConnectDiscoveredButton.IsEnabled =
             !busy && DiscoveredDevicesCombo.SelectedItem is DiscoveredDevice;
         TrustedDevicesCombo.IsEnabled = !busy;
@@ -1685,6 +2162,9 @@ public partial class MainWindow : Window
         BackButton.IsEnabled = browsing && _history.Count > 0 && !busy;
         UpButton.IsEnabled = browsing && _current!.Path.Count > 1 && !busy;
         FileActionsPanel.IsEnabled = browsing && !busy;
+        UploadActionsButton.IsEnabled = browsing && !busy;
+        QuickActionButton.IsEnabled = browsing && !busy;
+        SelectActionsButton.IsEnabled = browsing && !busy;
         FilesGrid.IsEnabled = browsing && !busy;
         FilesList.IsEnabled = browsing && !busy;
         ThumbnailList.IsEnabled = browsing && !busy;
@@ -1713,6 +2193,206 @@ public partial class MainWindow : Window
         {
             await NavigateAsync(_current, addToHistory: false);
         }
+    }
+
+    public void HandleStartupArgs(IReadOnlyList<string> args)
+    {
+        BringToFront();
+        if (args.Count == 0)
+        {
+            return;
+        }
+
+        var mode = "wifi";
+        var paths = new List<string>();
+        for (var index = 0; index < args.Count; index++)
+        {
+            var arg = args[index];
+            if (arg.Equals("--send-to-phone", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (arg.Equals("--mode", StringComparison.OrdinalIgnoreCase)
+                && index + 1 < args.Count)
+            {
+                mode = args[++index].Trim().ToLowerInvariant() == "online"
+                    ? "online"
+                    : "wifi";
+                continue;
+            }
+            if (File.Exists(arg) || Directory.Exists(arg))
+            {
+                paths.Add(Path.GetFullPath(arg));
+            }
+        }
+
+        if (paths.Count == 0)
+        {
+            return;
+        }
+
+        RememberPendingSendToPhone(paths, mode);
+        OperationStatusText.Text = _client is null
+            ? $"Connect to a phone to send {paths.Count} item(s) to phone Downloads."
+            : $"Sending {paths.Count} item(s) to phone Downloads...";
+        _ = FlushPendingSendToPhoneAsync();
+    }
+
+    private void RememberPendingSendToPhone(IEnumerable<string> paths, string mode)
+    {
+        _pendingSendMode = string.Equals(mode, "online", StringComparison.OrdinalIgnoreCase)
+            ? "online"
+            : "wifi";
+        foreach (var path in paths)
+        {
+            if ((File.Exists(path) || Directory.Exists(path))
+                && !_pendingSendToPhonePaths.Contains(path, StringComparer.OrdinalIgnoreCase))
+            {
+                _pendingSendToPhonePaths.Add(path);
+            }
+        }
+    }
+
+    private async Task FlushPendingSendToPhoneAsync()
+    {
+        if (_pendingSendToPhonePaths.Count == 0 || _client is null || _rootItem is null)
+        {
+            return;
+        }
+
+        var pending = _pendingSendToPhonePaths.ToArray();
+        _pendingSendToPhonePaths.Clear();
+        if (_pendingSendMode == "online")
+        {
+            OperationStatusText.Text = "Sending Explorer item(s) through the online address to phone Downloads...";
+        }
+        await UploadPathsToPhoneDownloadsAsync(pending);
+    }
+
+    private void StartShareInboxWatcher()
+    {
+        StopShareInboxWatcher();
+        if (_client is null)
+        {
+            return;
+        }
+
+        _shareInboxCancellation = new CancellationTokenSource();
+        _ = WatchShareInboxAsync(_shareInboxCancellation.Token);
+    }
+
+    private void StopShareInboxWatcher()
+    {
+        _shareInboxCancellation?.Cancel();
+        _shareInboxCancellation?.Dispose();
+        _shareInboxCancellation = null;
+        _queuedPhoneShareIds.Clear();
+    }
+
+    private async Task WatchShareInboxAsync(CancellationToken cancellationToken)
+    {
+        var consecutiveFailures = 0;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await DownloadPendingPhoneSharesAsync(cancellationToken);
+                consecutiveFailures = 0;
+                await RefreshStorageInfoAsync();
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch
+            {
+                consecutiveFailures++;
+                if (consecutiveFailures >= 3)
+                {
+                    HandleDisconnected("The phone stopped responding. Reconnect when it's back online.");
+                    return;
+                }
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+        }
+    }
+
+    private async Task DownloadPendingPhoneSharesAsync(CancellationToken cancellationToken)
+    {
+        var client = _client;
+        if (client is null)
+        {
+            return;
+        }
+
+        var inboxItems = await client.GetSharedInboxAsync(cancellationToken);
+        if (inboxItems.Count == 0)
+        {
+            return;
+        }
+
+        await Dispatcher.InvokeAsync(() =>
+        {
+            var downloads = KnownDownloadsFolder();
+            Directory.CreateDirectory(downloads);
+            var queued = 0;
+            foreach (var item in inboxItems.Where(item => !item.IsDirectory))
+            {
+                if (!QueuePhoneShareDownload(item, downloads))
+                {
+                    continue;
+                }
+                queued++;
+            }
+            if (queued > 0)
+            {
+                OperationStatusText.Text =
+                    $"Queued {queued} phone share(s) for download to {downloads}.";
+                ShowTransfersWindow();
+            }
+        });
+    }
+
+    private bool QueuePhoneShareDownload(RemoteItem item, string downloads)
+    {
+        if (_client is null)
+        {
+            return false;
+        }
+        if (!_queuedPhoneShareIds.Add(item.Id))
+        {
+            return false;
+        }
+
+        var destination = ReserveLocalPath(
+            downloads,
+            FileNameSanitizer.Sanitize(item.Name),
+            isDirectory: false);
+        TransferManager.Instance.Enqueue(
+            _client,
+            item.Name,
+            "Phone share",
+            item.Size,
+            async (client, progress, cancellationToken) =>
+            {
+                try
+                {
+                    await client.DownloadSharedInboxItemAsync(
+                        item,
+                        destination,
+                        progress,
+                        cancellationToken);
+                    await client.DeleteSharedInboxItemAsync(item.Id, cancellationToken);
+                }
+                finally
+                {
+                    await Dispatcher.InvokeAsync(() => _queuedPhoneShareIds.Remove(item.Id));
+                }
+            },
+            location: downloads,
+            localPath: destination);
+        return true;
     }
 
     private static T? FindDataContext<T>(DependencyObject? source) where T : class
@@ -1762,6 +2442,135 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateCutPendingStates()
+    {
+        var cutIds = RemoteClipboard.IsCut
+            && _client is not null
+            && string.Equals(
+                RemoteClipboard.ConnectionKey,
+                _client.ConnectionKey,
+                StringComparison.OrdinalIgnoreCase)
+                ? RemoteClipboard.Items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in _items)
+        {
+            item.IsCutPending = cutIds.Contains(item.Id);
+        }
+    }
+
+    private static bool IsDownloadsFolderName(string name) =>
+        name.Equals("Download", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("Downloads", StringComparison.OrdinalIgnoreCase);
+
+    private static string KnownDownloadsFolder()
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return string.IsNullOrWhiteSpace(profile)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Downloads")
+            : Path.Combine(profile, "Downloads");
+    }
+
+    private bool ApplyEndpointText(string text, out string error)
+    {
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            error = "Enter the phone's online, VPN, or tunnel address.";
+            return false;
+        }
+
+        var candidate = text.Contains("://", StringComparison.Ordinal)
+            ? text
+            : $"https://{text}";
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
+            || string.IsNullOrWhiteSpace(uri.Host))
+        {
+            error = "Enter a valid address, for example example.com:8765.";
+            return false;
+        }
+
+        if (!uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+            && !uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+        {
+            error = "Phone Transfer uses an HTTPS address, VPN address, or tunnel URL.";
+            return false;
+        }
+
+        var port = uri.IsDefaultPort ? CurrentPortOrDefault() : uri.Port;
+        if (port is < 1 or > 65535)
+        {
+            error = "Enter a valid port number between 1 and 65535.";
+            return false;
+        }
+
+        HostTextBox.Text = uri.Host;
+        PortTextBox.Text = port.ToString();
+        return true;
+    }
+
+    private int CurrentPortOrDefault() =>
+        int.TryParse(PortTextBox.Text, out var port) && port is >= 1 and <= 65535
+            ? port
+            : 8765;
+
+    private void BringToFront()
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
+    private static string FormatFingerprint(string value)
+    {
+        var normalized = new string(value.Where(Uri.IsHexDigit).ToArray()).ToUpperInvariant();
+        if (normalized.Length == 0)
+        {
+            return value;
+        }
+
+        return string.Join(
+            " ",
+            Enumerable.Range(0, (normalized.Length + 7) / 8)
+                .Select(index =>
+                    normalized.Substring(index * 8, Math.Min(8, normalized.Length - index * 8))));
+    }
+
+    private static string DescribeConnectionMethod(ConnectionMethod method) => method switch
+    {
+        ConnectionMethod.RouterWifi => "via router Wi-Fi",
+        ConnectionMethod.PcHotspot => "via PC hotspot",
+        ConnectionMethod.Internet => "via online address",
+        _ => "via manual address"
+    };
+
+    private static string ReserveLocalPath(string directory, string name, bool isDirectory)
+    {
+        Directory.CreateDirectory(directory);
+        var candidate = Path.Combine(directory, name);
+        if (!File.Exists(candidate) && !Directory.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        var extension = isDirectory ? string.Empty : Path.GetExtension(name);
+        var stem = string.IsNullOrEmpty(extension) ? name : name[..^extension.Length];
+        for (var suffix = 2; ; suffix++)
+        {
+            var nextName = $"{stem} ({suffix}){extension}";
+            candidate = Path.Combine(directory, nextName);
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+    }
+
     private static string NormalizeFingerprint(string? value)
     {
         return string.IsNullOrWhiteSpace(value)
@@ -1779,6 +2588,7 @@ public partial class MainWindow : Window
         TransferManager.Instance.Changed -= TransferManager_Changed;
         RemoteClipboard.Changed -= RemoteClipboard_Changed;
         _thumbnailCancellation?.Cancel();
+        StopShareInboxWatcher();
         _client?.Dispose();
         base.OnClosed(e);
     }
@@ -1789,6 +2599,48 @@ public partial class MainWindow : Window
         string Host,
         int Port,
         string? CertificateFingerprint);
+
+    private sealed class BrowserTab : System.ComponentModel.INotifyPropertyChanged
+    {
+        private NavigationEntry _current;
+
+        public BrowserTab(NavigationEntry current)
+        {
+            _current = current;
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+        public NavigationEntry Current
+        {
+            get => _current;
+            set
+            {
+                if (ReferenceEquals(_current, value) || _current == value)
+                {
+                    return;
+                }
+
+                _current = value;
+                PropertyChanged?.Invoke(
+                    this,
+                    new System.ComponentModel.PropertyChangedEventArgs(nameof(Current)));
+                PropertyChanged?.Invoke(
+                    this,
+                    new System.ComponentModel.PropertyChangedEventArgs(nameof(Title)));
+                PropertyChanged?.Invoke(
+                    this,
+                    new System.ComponentModel.PropertyChangedEventArgs(nameof(PathLabel)));
+            }
+        }
+
+        public List<NavigationEntry> History { get; } = [];
+
+        public string Title => Current.Name;
+
+        public string PathLabel =>
+            string.Join(" > ", Current.Path.Select(segment => segment.Name));
+    }
 
     private sealed record NavigationEntry(
         string Id,

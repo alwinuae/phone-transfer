@@ -197,7 +197,7 @@ final class PhoneFolderServer implements Closeable {
         if ("/api/v1/info".equals(path) && "GET".equals(request.method)) {
             String json = "{"
                     + "\"name\":\"" + JsonUtil.escape(deviceName) + "\","
-                    + "\"version\":\"0.7.2\","
+                    + "\"version\":\"0.7.5\","
                     + "\"protocolVersion\":1,"
                     + "\"port\":" + HTTP_PORT + ","
                     + "\"transport\":\"https\","
@@ -264,6 +264,80 @@ final class PhoneFolderServer implements Closeable {
                 Log.e(TAG, "Storage utilization lookup failed", exception);
                 writeJson(output, 500, "Internal Server Error",
                         JsonUtil.error("STORAGE_ERROR", message(exception)), keepAlive);
+            }
+            return;
+        }
+
+        if ("/api/v1/inbox".equals(path) && "GET".equals(request.method)) {
+            try {
+                writeJson(output, 200, "OK", JsonUtil.items(SharedInbox.items(appContext)), keepAlive);
+            } catch (Exception exception) {
+                Log.e(TAG, "Shared inbox lookup failed", exception);
+                writeJson(output, 500, "Internal Server Error",
+                        JsonUtil.error("INBOX_ERROR", message(exception)), keepAlive);
+            }
+            return;
+        }
+
+        String[] inboxParts = path.split("/");
+        if (inboxParts.length >= 5
+                && "api".equals(inboxParts[1])
+                && "v1".equals(inboxParts[2])
+                && "inbox".equals(inboxParts[3])) {
+            String inboxItemId = decode(inboxParts[4]);
+            try {
+                if (inboxParts.length == 6
+                        && "content".equals(inboxParts[5])
+                        && "GET".equals(request.method)) {
+                    StorageBackend.Item item = SharedInbox.item(appContext, inboxItemId);
+                    ByteRange range = parseRange(request.headers.get("range"), item.size);
+                    long offset = range == null ? 0 : range.start;
+                    long endExclusive = range == null ? item.size : range.endExclusive;
+                    InputStream input = SharedInbox.open(appContext, inboxItemId);
+                    if (offset > 0) {
+                        long remaining = offset;
+                        while (remaining > 0) {
+                            long skipped = input.skip(remaining);
+                            if (skipped <= 0) {
+                                throw new FileNotFoundException("The requested inbox offset is beyond the file.");
+                            }
+                            remaining -= skipped;
+                        }
+                    }
+                    writeContent(
+                            output,
+                            item,
+                            input,
+                            offset,
+                            endExclusive,
+                            range != null,
+                            keepAlive);
+                    return;
+                }
+
+                if (inboxParts.length == 5 && "DELETE".equals(request.method)) {
+                    SharedInbox.delete(appContext, inboxItemId);
+                    writeEmpty(output, 204, "No Content", keepAlive);
+                    return;
+                }
+
+                writeJson(output, 405, "Method Not Allowed",
+                        JsonUtil.error("UNSUPPORTED_OPERATION", "This inbox operation is not supported."),
+                        keepAlive);
+            } catch (FileNotFoundException exception) {
+                writeJson(output, 404, "Not Found",
+                        JsonUtil.error("ITEM_NOT_FOUND", exception.getMessage()), keepAlive);
+            } catch (SecurityException exception) {
+                writeJson(output, 403, "Forbidden",
+                        JsonUtil.error("INBOX_FORBIDDEN", "Android no longer allows access to this shared item."),
+                        keepAlive);
+            } catch (IllegalArgumentException exception) {
+                writeJson(output, 400, "Bad Request",
+                        JsonUtil.error("INVALID_REQUEST", exception.getMessage()), keepAlive);
+            } catch (Exception exception) {
+                Log.e(TAG, "Shared inbox operation failed", exception);
+                writeJson(output, 500, "Internal Server Error",
+                        JsonUtil.error("INBOX_ERROR", message(exception)), keepAlive);
             }
             return;
         }

@@ -1,5 +1,54 @@
 # Phone Transfer Delivery Roadmap
 
+## Shipped In 0.7.6
+
+- Background connection health check that detects a dropped phone and resets
+  the left connection pane instead of leaving it stale.
+- Automatic periodic phone-storage refresh while connected.
+- Connection-method indicator (router Wi-Fi, PC hotspot, manual, online) in
+  the left connection pane.
+- Sent-date/time column and per-row Open/Show in folder actions in the
+  Transfers window.
+- Dark/Light/System theme setting.
+- GitHub Actions release workflow for the Windows installer and Android APK.
+
+## Shipped In 0.7.5
+
+- Hardened Explorer SendTo and right-click sends with single-instance command
+  forwarding, multi-select `%*` registry verbs, and queued file/folder sends.
+- Made app-window drops send to phone Downloads by default.
+- Turned Internet transfer into a direct online/VPN/tunnel address connect
+  prompt.
+- Added automated UI coverage for queued startup sends and the command bridge.
+
+## Shipped In 0.7.4
+
+- Added Android share-sheet intake and automatic desktop download to Windows
+  Downloads for shared phone items.
+- Added Windows SendTo/right-click Wi-Fi and Online send-to-phone entries.
+- Added quick actions for phone Downloads and PC Downloads transfers.
+- Added app-level drag/drop to phone Downloads.
+- Added clickable breadcrumbs, `Ctrl+Tab` tab switching, Select/Unselect all,
+  and visible cut-state styling.
+- Fixed duplicate upload and folder-create name conflicts with keep-both names.
+- Moved connected-phone details higher in the left pane with a compact icon.
+- Added an Internet transfer setup path for reachable online, VPN, or tunnel
+  addresses.
+- Fixed minimize, maximize, restore, and close across every custom dark form.
+- Replaced horizontal command scrolling with responsive single-row buttons
+  that scale down with the window and expand again when space returns.
+- Added subtle hover animation to command and title-bar buttons.
+- Added direct caption-control and responsive-width regression tests.
+
+## Shipped In 0.7.3
+
+- Edge-to-edge dark Windows chrome and dark scrollbar, checkbox, expander,
+  menu, tooltip, table, and dialog surfaces.
+- Clean top command strip using the existing file-management buttons, with no
+  redundant File/Edit/View menu or duplicate lower action row.
+- Multiple phone-folder tabs with independent path and back history.
+- Separate folder windows remain available from the folder action buttons.
+
 ## Shipped In 0.7.2
 
 - Notepad++-inspired dark desktop theme and supported dark Windows title bars.

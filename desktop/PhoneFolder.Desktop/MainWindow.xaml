@@ -3,26 +3,31 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:models="clr-namespace:PhoneFolder.Desktop.Models"
         Title="Phone Transfer"
-        Icon="Assets/PhoneTransfer.ico"
+        Icon="/PhoneTransfer;component/Assets/PhoneTransfer.ico"
+        Style="{StaticResource {x:Type Window}}"
         Width="1380"
         Height="860"
         MinWidth="1040"
         MinHeight="680"
+        Background="{DynamicResource WindowBrush}"
+        AllowDrop="True"
+        DragOver="Window_DragOver"
+        Drop="Window_Drop"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown"
         WindowStartupLocation="CenterScreen">
-    <Grid Margin="18">
+    <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="ConnectionColumn" Width="330"/>
-            <ColumnDefinition x:Name="ConnectionToggleColumn" Width="38"/>
+            <ColumnDefinition x:Name="ConnectionColumn" Width="318"/>
+            <ColumnDefinition x:Name="ConnectionToggleColumn" Width="34"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border x:Name="ConnectionPane"
                 Grid.Column="0"
-                Padding="22"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Padding="16"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="12">
             <Grid>
@@ -35,18 +40,18 @@
                 </Grid.RowDefinitions>
 
                 <ScrollViewer Grid.Row="0"
-                              Grid.RowSpan="4"
+                              Grid.RowSpan="5"
                               VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="0,0,6,0">
                     <StackPanel Margin="0,0,0,22" Orientation="Horizontal">
                         <Image Width="62"
                                Height="62"
                                Margin="0,0,12,0"
-                               Source="Assets/PhoneTransfer.png"/>
+                               Source="/PhoneTransfer;component/Assets/PhoneTransfer.png"/>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock FontSize="26" FontWeight="Bold" Text="Phone Transfer"/>
                             <TextBlock Margin="0,3,0,0"
-                                       Foreground="{StaticResource MutedBrush}"
+                                       Foreground="{DynamicResource MutedBrush}"
                                        Text="Fast Android file transfer"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
@@ -62,20 +67,62 @@
                             Content="Connect trusted phone"
                             Style="{StaticResource PrimaryButton}"/>
 
+                    <Border Margin="0,0,0,12"
+                            Padding="12"
+                            Background="{DynamicResource PanelRaisedBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="9">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Top"
+                                   Source="/PhoneTransfer;component/Assets/PhoneTransfer.png"/>
+                            <StackPanel Grid.Column="1"
+                                        Margin="9,0,0,0">
+                                <TextBlock x:Name="ConnectionStatusText"
+                                           FontWeight="SemiBold"
+                                           Text="Not connected"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="ConnectionMethodText"
+                                           Margin="0,2,0,0"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="DeviceDetailsText"
+                                           Margin="0,4,0,0"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="StorageStatusText"
+                                           Margin="0,10,0,5"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed"/>
+                                <ProgressBar x:Name="StorageUsageBar"
+                                             Height="18"
+                                             Maximum="100"
+                                             Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
                     <Expander x:Name="SetupExpander"
                               Margin="0,4,0,0"
                               Header="Setup and connection">
                         <StackPanel Margin="0,12,0,0">
                             <Border Margin="0,0,0,12"
                                     Padding="12"
-                                    Background="{StaticResource PanelRaisedBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{DynamicResource PanelRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="9">
                                 <StackPanel>
                                     <TextBlock FontWeight="Bold" Text="Router Wi-Fi"/>
                                     <TextBlock Margin="0,3,0,9"
-                                               Foreground="{StaticResource MutedBrush}"
+                                               Foreground="{DynamicResource MutedBrush}"
                                                Text="Use when the PC and phone share the same Wi-Fi router."
                                                TextWrapping="Wrap"/>
                                     <Button x:Name="DiscoverButton"
@@ -95,14 +142,14 @@
 
                             <Border Margin="0,0,0,12"
                                     Padding="12"
-                                    Background="{StaticResource PanelRaisedBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{DynamicResource PanelRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="9">
                                 <StackPanel>
                                     <TextBlock FontWeight="Bold" Text="PC hotspot (direct Wi-Fi)"/>
                                     <TextBlock Margin="0,3,0,9"
-                                               Foreground="{StaticResource MutedBrush}"
+                                               Foreground="{DynamicResource MutedBrush}"
                                                Text="Connect the phone to Windows Mobile Hotspot for a direct local link."
                                                TextWrapping="Wrap"/>
                                     <Button x:Name="OpenHotspotSettingsButton"
@@ -112,6 +159,24 @@
                                     <Button x:Name="HotspotButton"
                                             Click="HotspotButton_Click"
                                             Content="Find phone on PC hotspot"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,0,0,12"
+                                    Padding="12"
+                                    Background="{DynamicResource PanelRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="9">
+                                <StackPanel>
+                                    <TextBlock FontWeight="Bold" Text="Internet transfer"/>
+                                    <TextBlock Margin="0,3,0,9"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               Text="Use a reachable VPN, tunnel, or public HTTPS address for transfers away from home."
+                                               TextWrapping="Wrap"/>
+                                    <Button x:Name="InternetTransferButton"
+                                            Click="InternetTransferButton_Click"
+                                            Content="Connect online address"/>
                                 </StackPanel>
                             </Border>
 
@@ -156,24 +221,6 @@
                 </StackPanel>
                 </ScrollViewer>
 
-                <StackPanel Grid.Row="4">
-                    <TextBlock x:Name="ConnectionStatusText"
-                               Margin="0,16,0,4"
-                               FontWeight="SemiBold"
-                               Text="Not connected"/>
-                    <TextBlock x:Name="DeviceDetailsText"
-                               Foreground="{StaticResource MutedBrush}"
-                               TextWrapping="Wrap"/>
-                    <TextBlock x:Name="StorageStatusText"
-                               Margin="0,12,0,5"
-                               Foreground="{StaticResource MutedBrush}"
-                               TextWrapping="Wrap"
-                               Visibility="Collapsed"/>
-                    <ProgressBar x:Name="StorageUsageBar"
-                                 Height="18"
-                                 Maximum="100"
-                                 Visibility="Collapsed"/>
-                </StackPanel>
             </Grid>
         </Border>
 
@@ -190,109 +237,88 @@
                 ToolTip="Collapse connection panel"/>
 
         <Border Grid.Column="2"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Border Padding="14,12,6,6"
-                        BorderBrush="{StaticResource BorderBrush}"
+                <Border Grid.Row="0"
+                        Padding="14,8,6,8"
+                        Background="{DynamicResource TitleBarBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <WrapPanel x:Name="MainHeaderButtonsPanel">
-                            <Button x:Name="BackButton"
-                                    IsEnabled="False"
-                                    Click="BackButton_Click"
-                                    Content="&lt; Back"
-                                    Style="{StaticResource NavigationButton}"/>
-                            <Button x:Name="UpButton"
-                                    IsEnabled="False"
-                                    Click="UpButton_Click"
-                                    Content="^ Up"
-                                    Style="{StaticResource NavigationButton}"/>
-                            <Button x:Name="RefreshButton"
-                                    IsEnabled="False"
-                                    Click="RefreshButton_Click"
-                                    Content="Refresh"
-                                    Style="{StaticResource NavigationButton}"/>
-                            <Button x:Name="DisconnectButton"
-                                    IsEnabled="False"
-                                    Click="DisconnectButton_Click"
-                                    Content="Not connected"
-                                    Style="{StaticResource DisconnectedButton}"/>
-                            <Button x:Name="SettingsButton"
-                                    Click="SettingsButton_Click"
-                                    AutomationProperties.Name="Setup"
-                                    ToolTip="Application setup"
-                                    Style="{StaticResource ToolbarButton}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Width="18"
-                                               Height="18"
-                                               Margin="0,0,7,0"
-                                               VerticalAlignment="Center"
-                                               FontFamily="Segoe Fluent Icons"
-                                               FontSize="16"
-                                               Text="&#xE713;"
-                                               TextAlignment="Center"/>
-                                    <TextBlock VerticalAlignment="Center" Text="Setup"/>
-                                </StackPanel>
-                            </Button>
-                            <Button x:Name="TransfersButton"
-                                    Click="TransfersButton_Click"
-                                    Content="Transfers"
-                                    Style="{StaticResource ToolbarButton}"/>
-                        </WrapPanel>
-                        <TextBlock x:Name="PathText"
-                                   Grid.Row="1"
-                                   Margin="2,2,8,4"
-                                   VerticalAlignment="Center"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   Text="Connect to a phone to browse files"
-                                   TextTrimming="CharacterEllipsis"/>
-                    </Grid>
-                </Border>
-
-                <Border Grid.Row="1"
-                        Padding="14,10,6,2"
-                        BorderBrush="{StaticResource BorderBrush}"
-                        BorderThickness="0,0,0,1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <WrapPanel x:Name="FileActionsPanel" IsEnabled="False">
-                            <WrapPanel.Resources>
+                        <UniformGrid x:Name="FileActionsPanel"
+                                     IsEnabled="False"
+                                     Rows="1">
+                            <UniformGrid.Resources>
                                 <Style TargetType="Button"
-                                       BasedOn="{StaticResource ToolbarButton}"/>
-                            </WrapPanel.Resources>
+                                       BasedOn="{StaticResource ResponsiveToolbarButton}"/>
+                            </UniformGrid.Resources>
                             <Button x:Name="OpenMediaButton"
                                     Click="OpenMediaButton_Click"
                                     Content="Open"
                                     ToolTip="Open the selected file (Enter)"/>
-                            <Button Click="UploadButton_Click" Content="Upload files" ToolTip="Upload files from this PC"/>
-                            <Button Click="UploadFolderButton_Click" Content="Upload folder" ToolTip="Upload a folder from this PC"/>
+                            <Button x:Name="UploadActionsButton"
+                                    Click="UploadActionsButton_Click"
+                                    Content="Upload"
+                                    ToolTip="Upload files or folders from this PC">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="UploadButton_Click" Header="Upload files"/>
+                                        <MenuItem Click="UploadFolderButton_Click" Header="Upload folder"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
                             <Button x:Name="DownloadButton"
                                     Click="DownloadButton_Click"
                                     Content="Download"
                                     ToolTip="Download selected items"/>
-                            <Button Click="NewFolderButton_Click" Content="New folder" ToolTip="Create a folder"/>
+                            <Button x:Name="QuickActionButton"
+                                    Click="QuickActionButton_Click"
+                                    Content="Quick action"
+                                    ToolTip="Common one-click transfer actions">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="SendToPhoneDownloads_Click"
+                                                  Header="Send PC files to phone Downloads..."/>
+                                        <MenuItem Click="SendFolderToPhoneDownloads_Click"
+                                                  Header="Send PC folder to phone Downloads..."/>
+                                        <MenuItem Click="DownloadToPcDownloads_Click"
+                                                  Header="Download selected to PC Downloads"/>
+                                        <Separator/>
+                                        <MenuItem Click="InternetTransferButton_Click"
+                                                  Header="Use online address"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                            <Button x:Name="SelectActionsButton"
+                                    Click="SelectActionsButton_Click"
+                                    Content="Select"
+                                    ToolTip="Select or clear the visible folder items">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="SelectAllButton_Click"
+                                                  Header="Select all"/>
+                                        <MenuItem Click="ClearSelectionButton_Click"
+                                                  Header="Unselect all"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                            <Button Click="NewFolderButton_Click"
+                                    Content="New folder"
+                                    ToolTip="Create a folder"/>
                             <Button x:Name="OpenFolderWindowButton"
                                     Click="OpenFolderWindowButton_Click"
-                                    Content="Open folder window"
-                                    ToolTip="Open the current or selected folder in another window"/>
+                                    Content="Open in new tab"
+                                    ToolTip="Keep the current or selected folder open in another tab"/>
                             <Button x:Name="CopySelectionButton"
                                     Click="CopySelectionButton_Click"
                                     Content="Copy"
@@ -321,19 +347,14 @@
                                     Click="DeleteButton_Click"
                                     Content="Delete"
                                     ToolTip="Delete selected items (Delete)"/>
-                        </WrapPanel>
-                        <WrapPanel Grid.Row="1"
-                                   HorizontalAlignment="Right">
                             <Button x:Name="FolderPaneButton"
                                     Click="FolderPaneButton_Click"
                                     Content="Folders: On"
-                                    ToolTip="Show or hide the resizable folder navigation pane"
-                                    Style="{StaticResource ToolbarButton}"/>
+                                    ToolTip="Show or hide the resizable folder navigation pane"/>
                             <Button x:Name="ViewModeButton"
                                     Click="ViewModeButton_Click"
                                     Content="View: Details"
-                                    ToolTip="Change view (Ctrl+1 Details, Ctrl+2 List, Ctrl+3 Thumbnails)"
-                                    Style="{StaticResource ToolbarButton}">
+                                    ToolTip="Change view (Ctrl+1 through Ctrl+6)">
                                 <Button.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Click="ViewDetails_Click" Header="Details"/>
@@ -348,8 +369,7 @@
                             <Button x:Name="SortModeButton"
                                     Click="SortModeButton_Click"
                                     Content="Sort: Name"
-                                    ToolTip="Sort files and folders"
-                                    Style="{StaticResource ToolbarButton}">
+                                    ToolTip="Sort files and folders">
                                 <Button.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Click="SortName_Click" Header="Name"/>
@@ -362,11 +382,125 @@
                                     </ContextMenu>
                                 </Button.ContextMenu>
                             </Button>
-                        </WrapPanel>
+                        </UniformGrid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Padding="14,10,6,6"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <UniformGrid x:Name="MainHeaderButtonsPanel"
+                                     Rows="1">
+                            <Button x:Name="BackButton"
+                                    IsEnabled="False"
+                                    Click="BackButton_Click"
+                                    Content="&lt; Back"
+                                    Style="{StaticResource NavigationButton}"/>
+                            <Button x:Name="UpButton"
+                                    IsEnabled="False"
+                                    Click="UpButton_Click"
+                                    Content="^ Up"
+                                    Style="{StaticResource NavigationButton}"/>
+                            <Button x:Name="RefreshButton"
+                                    IsEnabled="False"
+                                    Click="RefreshButton_Click"
+                                    Content="Refresh"
+                                    Style="{StaticResource NavigationButton}"/>
+                            <Button x:Name="DisconnectButton"
+                                    IsEnabled="False"
+                                    Click="DisconnectButton_Click"
+                                    Content="Not connected"
+                                    Style="{StaticResource DisconnectedButton}"/>
+                            <Button x:Name="SettingsButton"
+                                    Click="SettingsButton_Click"
+                                    AutomationProperties.Name="Setup"
+                                    ToolTip="Application setup"
+                                    Style="{StaticResource ResponsiveToolbarButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Width="18"
+                                               Height="18"
+                                               Margin="0,0,7,0"
+                                               VerticalAlignment="Center"
+                                               FontFamily="Segoe Fluent Icons"
+                                               FontSize="16"
+                                               Text="&#xE713;"
+                                               TextAlignment="Center"/>
+                                    <TextBlock VerticalAlignment="Center" Text="Setup"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="TransfersButton"
+                                    Click="TransfersButton_Click"
+                                    Content="Transfers"
+                                    Style="{StaticResource ResponsiveToolbarButton}"/>
+                        </UniformGrid>
+                        <TextBlock x:Name="PathText"
+                                   Grid.Row="1"
+                                   Margin="2,7,8,2"
+                                   VerticalAlignment="Center"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Text="Connect to a phone to browse files"
+                                   TextTrimming="CharacterEllipsis"/>
                     </Grid>
                 </Border>
 
-                <Grid Grid.Row="2">
+                <Border Grid.Row="2"
+                        Padding="12,0,10,0"
+                        Background="{DynamicResource WindowBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <ListBox x:Name="FolderTabsList"
+                             AutomationProperties.Name="Open phone folders"
+                             ItemContainerStyle="{StaticResource BrowserTabItem}"
+                             SelectionChanged="FolderTabsList_SelectionChanged"
+                             Style="{StaticResource BrowserTabsList}"
+                             Visibility="Collapsed">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="8,0,2,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="18"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="24"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Path Width="14"
+                                          Height="11"
+                                          VerticalAlignment="Center"
+                                          Fill="#E6A23C"
+                                          Stretch="Fill"
+                                          Data="M1,3 L7,3 L9,6 L19,6 L19,16 L1,16 Z"/>
+                                    <TextBlock Grid.Column="1"
+                                               Margin="6,0"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding Title}"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding PathLabel}"/>
+                                    <Button Grid.Column="2"
+                                            Width="22"
+                                            Height="22"
+                                            MinWidth="0"
+                                            MinHeight="0"
+                                            Margin="0"
+                                            Padding="0"
+                                            Click="CloseFolderTabButton_Click"
+                                            Content="&#xE8BB;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            FontSize="9"
+                                            Style="{StaticResource CompactToolbarButton}"
+                                            Tag="{Binding}"
+                                            ToolTip="Close tab"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+
+                <Grid Grid.Row="3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="FolderColumn" Width="220" MinWidth="120"/>
                         <ColumnDefinition x:Name="FolderSplitterColumn" Width="6"/>
@@ -376,7 +510,7 @@
                     <Border x:Name="FolderPane"
                             Grid.Column="0"
                             Padding="8"
-                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="0,0,1,0">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top"
@@ -384,7 +518,7 @@
                                        FontWeight="SemiBold"
                                        Text="Folders"/>
                             <TreeView x:Name="FolderTree"
-                                      Background="{StaticResource PanelBrush}"
+                                      Background="{DynamicResource PanelBrush}"
                                       ItemsSource="{Binding}"
                                       SelectedItemChanged="FolderTree_SelectedItemChanged"
                                       TreeViewItem.Expanded="FolderTreeItem_Expanded">
@@ -409,7 +543,7 @@
                                   Grid.Column="1"
                                   Width="6"
                                   HorizontalAlignment="Stretch"
-                                  Background="{StaticResource ControlBrush}"
+                                  Background="{DynamicResource ControlBrush}"
                                   ResizeBehavior="PreviousAndNext"
                                   ResizeDirection="Columns"
                                   ShowsPreview="True"/>
@@ -505,8 +639,8 @@
                                                   Click="ItemCheckBox_Click"
                                                   IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Name}"/>
-                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding TypeLabel}"/>
-                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="{Binding SizeLabel}"/>
+                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Text="{Binding TypeLabel}"/>
+                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Text="{Binding SizeLabel}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -532,27 +666,27 @@
                                 Padding="24"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Background="{StaticResource PanelRaisedBrush}"
-                                BorderBrush="{StaticResource AccentBrush}"
+                                Background="{DynamicResource PanelRaisedBrush}"
+                                BorderBrush="{DynamicResource AccentBrush}"
                                 BorderThickness="2"
                                 CornerRadius="12"
                                 IsHitTestVisible="False"
                                 Visibility="Collapsed">
                             <TextBlock FontSize="18"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource AccentBrush}"
-                                       Text="Drop files or folders to copy them here"/>
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       Text="Drop files or folders to send to phone Downloads"/>
                         </Border>
                     </Grid>
                 </Grid>
 
-                <Border Grid.Row="3"
+                <Border Grid.Row="4"
                         Padding="18,12"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,1,0,0">
                     <TextBlock x:Name="OperationStatusText"
                                VerticalAlignment="Center"
-                               Foreground="{StaticResource MutedBrush}"
+                               Foreground="{DynamicResource MutedBrush}"
                                Text="Ready"/>
                 </Border>
             </Grid>

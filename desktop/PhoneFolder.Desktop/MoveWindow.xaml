@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:models="clr-namespace:PhoneFolder.Desktop.Models"
         Title="Choose destination folder"
+        Style="{StaticResource {x:Type Window}}"
         Width="480"
         Height="560"
         MinWidth="380"
@@ -22,7 +23,7 @@
                    Text="Choose the destination folder"/>
         <Border Grid.Row="1"
                 Padding="8"
-                BorderBrush="{StaticResource BorderBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
             <TreeView x:Name="FolderTree"
@@ -44,7 +45,7 @@
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="DestinationText"
                        VerticalAlignment="Center"
-                       Foreground="{StaticResource MutedBrush}"
+                       Foreground="{DynamicResource MutedBrush}"
                        Text="Select a folder"/>
             <Button Grid.Column="1" IsCancel="True" Content="Cancel"/>
             <Button x:Name="ConfirmButton"

@@ -2,11 +2,13 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Phone Transfer - Folder"
-        Icon="Assets/PhoneTransfer.ico"
+        Icon="/PhoneTransfer;component/Assets/PhoneTransfer.ico"
+        Style="{StaticResource {x:Type Window}}"
         Width="980"
         Height="640"
         MinWidth="720"
         MinHeight="440"
+        Background="{DynamicResource WindowBrush}"
         PreviewKeyDown="Window_PreviewKeyDown"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="14">
@@ -18,8 +20,8 @@
         </Grid.RowDefinitions>
 
         <Border Padding="12,10,4,4"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
             <Grid>
@@ -27,7 +29,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <WrapPanel x:Name="FolderNavigationPanel">
+                <UniformGrid x:Name="FolderNavigationPanel"
+                             Rows="1">
                     <Button x:Name="BackButton"
                             Click="BackButton_Click"
                             Content="&lt; Back"
@@ -39,7 +42,7 @@
                     <Button Click="RefreshButton_Click"
                             Content="Refresh"
                             Style="{StaticResource NavigationButton}"/>
-                </WrapPanel>
+                </UniformGrid>
                 <TextBlock x:Name="PathText"
                            Grid.Row="1"
                            Margin="2,2,8,6"
@@ -53,15 +56,16 @@
         <Border Grid.Row="1"
                 Margin="0,10,0,10"
                 Padding="12,10,4,2"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
-            <WrapPanel x:Name="FolderActionsPanel">
-                <WrapPanel.Resources>
+            <UniformGrid x:Name="FolderActionsPanel"
+                         Rows="1">
+                <UniformGrid.Resources>
                     <Style TargetType="Button"
-                           BasedOn="{StaticResource ToolbarButton}"/>
-                </WrapPanel.Resources>
+                           BasedOn="{StaticResource ResponsiveToolbarButton}"/>
+                </UniformGrid.Resources>
                 <Button Click="UploadButton_Click" Content="Upload files"/>
                 <Button x:Name="DownloadButton"
                         Click="DownloadButton_Click"
@@ -120,7 +124,7 @@
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
-            </WrapPanel>
+            </UniformGrid>
         </Border>
 
         <Grid Grid.Row="2"
@@ -246,11 +250,11 @@
                                        Text="{Binding Name}"/>
                             <TextBlock Grid.Column="2"
                                        VerticalAlignment="Center"
-                                       Foreground="{StaticResource MutedBrush}"
+                                       Foreground="{DynamicResource MutedBrush}"
                                        Text="{Binding TypeLabel}"/>
                             <TextBlock Grid.Column="3"
                                        VerticalAlignment="Center"
-                                       Foreground="{StaticResource MutedBrush}"
+                                       Foreground="{DynamicResource MutedBrush}"
                                        Text="{Binding SizeLabel}"/>
                         </Grid>
                     </DataTemplate>
@@ -276,8 +280,8 @@
                                 Height="164"
                                 Margin="5"
                                 Padding="7"
-                                Background="{StaticResource PanelRaisedBrush}"
-                                BorderBrush="{StaticResource BorderBrush}"
+                                Background="{DynamicResource PanelRaisedBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="6">
                             <Grid>
@@ -361,7 +365,7 @@
                                                Text="{Binding Name}"
                                                TextAlignment="Center"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Foreground="{StaticResource MutedBrush}"
+                                    <TextBlock Foreground="{DynamicResource MutedBrush}"
                                                Text="{Binding SizeLabel}"
                                                TextAlignment="Center"/>
                                 </StackPanel>
@@ -375,15 +379,15 @@
                     Padding="20"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Background="{StaticResource PanelRaisedBrush}"
-                    BorderBrush="{StaticResource AccentBrush}"
+                    Background="{DynamicResource PanelRaisedBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
                     BorderThickness="2"
                     CornerRadius="8"
                     IsHitTestVisible="False"
                     Visibility="Collapsed">
                 <TextBlock FontSize="17"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource AccentBrush}"
+                           Foreground="{DynamicResource AccentBrush}"
                            Text="Drop PC files or copied phone items here"/>
             </Border>
         </Grid>
@@ -391,7 +395,7 @@
         <TextBlock x:Name="StatusText"
                    Grid.Row="3"
                    Margin="4,10,4,0"
-                   Foreground="{StaticResource MutedBrush}"
+                   Foreground="{DynamicResource MutedBrush}"
                    Text="Ready"/>
     </Grid>
 </Window>

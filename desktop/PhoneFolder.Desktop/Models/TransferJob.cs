@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace PhoneFolder.Desktop.Models;
@@ -18,19 +20,25 @@ public sealed class TransferJob : INotifyPropertyChanged
         string direction,
         long totalBytes,
         string deviceName,
-        string location)
+        string location,
+        string? localPath = null)
     {
         Name = name;
         Direction = direction;
         TotalBytes = Math.Max(0, totalBytes);
         DeviceName = deviceName;
         Location = location;
+        LocalPath = localPath;
+        SentAt = DateTimeOffset.Now;
     }
 
     public string Name { get; }
     public string Direction { get; }
     public string DeviceName { get; }
     public string Location { get; }
+    public string? LocalPath { get; }
+    public DateTimeOffset SentAt { get; }
+    public string SentAtLabel => SentAt.ToString("G", CultureInfo.CurrentCulture);
     public long TotalBytes { get; }
     public string SizeLabel => FormatSize(TotalBytes);
     public CancellationToken CancellationToken => _cancellation.Token;
@@ -62,10 +70,16 @@ public sealed class TransferJob : INotifyPropertyChanged
             if (SetField(ref _isComplete, value))
             {
                 OnPropertyChanged(nameof(CanCancel));
+                OnPropertyChanged(nameof(CanReveal));
             }
         }
     }
     public bool CanCancel => !IsComplete && !_cancellation.IsCancellationRequested;
+    public bool CanReveal =>
+        IsComplete
+        && Status == "Completed"
+        && LocalPath is not null
+        && (File.Exists(LocalPath) || Directory.Exists(LocalPath));
 
     public void MarkRunning()
     {

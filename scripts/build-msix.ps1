@@ -6,7 +6,7 @@ param(
     [string]$Publisher,
 
     [string]$PublisherDisplayName = "ALWIN THOMAS",
-    [string]$Version = "0.7.2.0",
+    [string]$Version = "0.7.5.0",
     [string]$ArtifactName
 )
 
@@ -26,7 +26,7 @@ $artifact = Join-Path $releaseRoot $ArtifactName
 $validationRoot = Join-Path $root "artifacts\validation\msix"
 
 if ($Version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
-    throw "MSIX version must contain four numeric parts, for example 0.7.2.0."
+    throw "MSIX version must contain four numeric parts, for example 0.7.5.0."
 }
 if (-not (Test-Path -LiteralPath $assetRoot)) {
     throw "MSIX visual assets are missing. Run scripts\generate-branding.py first."

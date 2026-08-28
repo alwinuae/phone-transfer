@@ -4,10 +4,57 @@ Phone Transfer is a local-first Windows and Android application for browsing,
 managing, streaming, and transferring files over a normal Wi-Fi router or a
 Windows Mobile Hotspot. File contents stay on the local network.
 
-## Version 0.7.2
+## Version 0.7.6
 
+Version 0.7.6 fixes stale connection/storage status after the phone drops
+off, adds transfer timestamps and quick open/reveal actions, shows how the
+phone is connected, and adds a Dark/Light/system theme setting.
+
+- The left connection pane now detects a lost connection and updates within
+  seconds instead of continuing to show a stale "Connected" state; phone
+  storage usage refreshes automatically while connected.
+- The left connection pane shows how the current phone is connected (router
+  Wi-Fi, PC hotspot, manual address, or online address).
+- The Transfers window shows when each item was sent, using your Windows
+  regional date/time format, plus Open and Show in folder buttons per row.
+- Setup now has a Theme option: Dark, Light, or match the Windows setting.
+- Added a GitHub Actions release workflow that builds and publishes the
+  Windows installer and Android APK automatically on a version tag.
+
+## Version 0.7.5
+
+Version 0.7.5 fixes the Windows send-to-phone cycles and keeps the 0.7.4
+transfer workflow improvements, custom Windows caption fixes, responsive
+single-row toolbars, and edge-to-edge charcoal theme.
+
+- Explorer SendTo and right-click launches now forward into the already-open
+  app, so selected files and folders are queued in one transfer window.
+- Windows right-click verbs use multi-select `%*` forwarding for Wi-Fi and
+  Online sends instead of only receiving one selected path.
+- Dropping files or folders onto the app now sends them to phone Downloads by
+  default.
+- The Quick action menu includes separate file and folder sends to phone
+  Downloads.
+- Internet transfer prompts for a reachable online, VPN, or tunnel address and
+  connects directly with the existing access code/trusted device flow.
+- Connected-phone certificate text is grouped so it wraps inside the left pane.
 - Sleek Notepad++-inspired dark desktop theme with dark Windows title bars.
-- Responsive fixed-height toolbars wrap cleanly without shrinking or overlap.
+- Working minimize, maximize, restore, and close controls on every form.
+- Responsive fixed-height toolbars shrink cleanly without scrolling or overlap.
+- Grouped Upload, Select, and Quick action dropdowns keep related commands
+  together.
+- Quick actions can send PC files to phone Downloads or download selected
+  phone items to Windows Downloads.
+- Android share-sheet support queues shared files/text for automatic download
+  to the connected laptop.
+- Windows right-click and SendTo entries send files or folders to the phone
+  over Wi-Fi or an online/VPN/tunnel address.
+- Dropping files onto the app can send them directly to phone Downloads.
+- Clickable breadcrumbs and `Ctrl+Tab` make open folders easier to navigate.
+- `Ctrl+X` now visibly marks files and folders waiting to be pasted.
+- Duplicate upload and new-folder name conflicts keep both items with
+  numbered names.
+- Subtle hover animation on command and title-bar buttons.
 - Main and independent folder windows support Details, List, Tiles, and small,
   medium, or large icon views.
 - Compact details rows show more files in browser, trusted-phone, and transfer
@@ -88,10 +135,19 @@ Prerequisites: .NET 10 SDK, JDK 17, Android SDK 36, and Inno Setup 6.
 Artifacts:
 
 ```text
-artifacts/release/Phone-Transfer-Windows-Setup-v0.7.2.exe
-artifacts/release/Phone-Transfer-Android-v0.7.2.apk
+artifacts/release/Phone-Transfer-Windows-Setup-v0.7.6.exe
+artifacts/release/Phone-Transfer-Android-v0.7.6.apk
 artifacts/release/SHA256SUMS.txt
 ```
+
+Pushing a `v*` tag also runs `.github/workflows/release.yml`, which builds
+both artifacts on a `windows-latest` runner and publishes them to the
+matching GitHub Release. It signs the Android APK with the keystore in the
+`ANDROID_KEYSTORE_BASE64`/`ANDROID_KEYSTORE_PASSWORD` repository secrets; if
+those secrets are not set yet, the workflow generates a new keystore, uploads
+it as a workflow artifact for you to save, and future runs will keep
+generating a new one until you add it as secrets (do this once, or every
+release invalidates the previous APK as an update target).
 
 ## Verification
 
